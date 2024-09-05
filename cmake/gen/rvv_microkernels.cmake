@@ -56,6 +56,7 @@ SET(NON_PROD_RVV_MICROKERNEL_SRCS
   src/f32-avgpool/gen/f32-avgpool-9p8x-minmax-rvv-c1v.c
   src/f32-avgpool/gen/f32-avgpool-9x-minmax-rvv-c1v.c
   src/f32-dwconv/gen/f32-dwconv-3p8c-minmax-rvv.c
+  src/f32-dwconv/gen/f32-dwconv-4p8c-minmax-rvv.c
   src/f32-gavgpool/gen/f32-gavgpool-7p7x-minmax-rvv-c1v.c
   src/f32-gavgpool/gen/f32-gavgpool-7p7x-minmax-rvv-c4v.c
   src/f32-gavgpool/gen/f32-gavgpool-7x-minmax-rvv-c1v.c
