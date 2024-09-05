@@ -3596,6 +3596,24 @@ std::vector<DWConvTestParams> CreateTests2(
 #endif  // XNN_ARCH_WASM || XNN_ARCH_WASMSIMD || XNN_ARCH_WASMRELAXEDSIMD
 
 
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+  INSTANTIATE_TEST_SUITE_P(
+      F32_DWCONV_MINMAX_3P8C__RVV, DWConvTest,
+      testing::ValuesIn(CreateTests1(
+          /*c_block=*/8, /*adj_c_block=*/8, /*cr=*/8, /*kr=*/3,
+          [](DWConvMicrokernelTester& tester) {
+            tester.Test(xnn_f32_dwconv_minmax_ukernel_3p8c__rvv,
+                        xnn_init_f32_minmax_scalar_params);
+          },
+          []() {
+            TEST_REQUIRES_RISCV_VECTOR;
+          })),
+      [](const testing::TestParamInfo<DWConvTest::ParamType>& info) {
+        return info.param.test_name;
+      });
+#endif  // XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+
+
 INSTANTIATE_TEST_SUITE_P(
     F32_DWCONV_MINMAX_3P1C__SCALAR, DWConvTest,
     testing::ValuesIn(CreateTests1(
