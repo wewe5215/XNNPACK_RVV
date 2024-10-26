@@ -1985,6 +1985,44 @@ static void f32_dwconv_3f3m3l1c1s1r__wasm_acc2(benchmark::State& state, models::
   BENCHMARK_FP32_END2END(f32_dwconv_5f5m5l4c4s4r__wasmrelaxedsimd_fma_acc2);
 #endif  // XNN_ARCH_WASMRELAXEDSIMD
 
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+  static void f32_dwconv_3p8c__rvv(benchmark::State& state, models::ExecutionPlanFactory model) {
+    DWConvEnd2EndBenchmark(state, model,
+      xnn_f32_dwconv_minmax_ukernel_3p8c__rvv,
+      nullptr /* dwconv */,
+      xnn_init_f32_minmax_scalar_params,
+      8 /* channel tile */, 3 /* primary tile */, benchmark::utils::CheckRVV);
+  }
+
+  static void f32_dwconv_4p8c__rvv(benchmark::State& state, models::ExecutionPlanFactory model) {
+    DWConvEnd2EndBenchmark(state, model,
+      xnn_f32_dwconv_minmax_ukernel_4p8c__rvv,
+      nullptr /* dwconv */,
+      xnn_init_f32_minmax_scalar_params,
+      8 /* channel tile */, 4 /* primary tile */, benchmark::utils::CheckRVV);
+  }
+
+  static void f32_dwconv_9p8c__rvv(benchmark::State& state, models::ExecutionPlanFactory model) {
+    DWConvEnd2EndBenchmark(state, model,
+      xnn_f32_dwconv_minmax_ukernel_9p8c__rvv,
+      nullptr /* dwconv */,
+      xnn_init_f32_minmax_scalar_params,
+      8 /* channel tile */, 9 /* primary tile */, benchmark::utils::CheckRVV);
+  }
+
+  static void f32_dwconv_25p8c__rvv_acc2(benchmark::State& state, models::ExecutionPlanFactory model) {
+    DWConvEnd2EndBenchmark(state, model,
+      xnn_f32_dwconv_minmax_ukernel_25p8c__rvv_acc2,
+      nullptr /* dwconv */,
+      xnn_init_f32_minmax_scalar_params,
+      8 /* channel tile */, 25 /* primary tile */, benchmark::utils::CheckRVV);
+  }
+  BENCHMARK_FP32_END2END(f32_dwconv_3p8c__rvv)
+  BENCHMARK_FP32_END2END(f32_dwconv_4p8c__rvv)
+  BENCHMARK_FP32_END2END(f32_dwconv_9p8c__rvv)
+  BENCHMARK_FP32_END2END(f32_dwconv_25p8c__rvv_acc2)
+#endif
+
 static void f32_dwconv_9p1c__scalar(benchmark::State& state, models::ExecutionPlanFactory model) {
   DWConvEnd2EndBenchmark(state, model,
     xnn_f32_dwconv_minmax_ukernel_9p1c__scalar,

@@ -2292,6 +2292,33 @@ static void GEMMEnd2EndBenchmark(
   BENCHMARK_FP32_END2END(f32_gemm_4x4__wasm);
 #endif  // XNN_ARCH_WASM
 
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+static void f32_gemm_minmax_ukernel_1x4v__rvv(benchmark::State& state, models::ExecutionPlanFactory model) {
+    GEMMEnd2EndBenchmark(state, model,
+      xnn_f32_gemm_minmax_ukernel_7x4v__rvv,
+      xnn_f32_igemm_minmax_ukernel_7x4v__rvv,
+      xnn_f32_gemm_minmax_ukernel_1x4v__rvv,
+      xnn_f32_igemm_minmax_ukernel_1x4v__rvv,
+      nullptr /* gemm_relu */, nullptr /* igemm_relu */, nullptr /* gemm1_relu */, nullptr /* igemm1_relu */,
+      nullptr /* gemm */, nullptr /* igemm */, nullptr /* gemm1 */, nullptr /* igemm1 */,
+      xnn_init_f32_minmax_scalar_params,
+      /*mr=*/7, /*nr=*/4 * xnn_init_hardware_config()->vlenb / sizeof(float));
+  }
+BENCHMARK_FP32_END2END(f32_gemm_minmax_ukernel_1x4v__rvv);
+
+static void f32_gemm_minmax_ukernel_1x2v__rvv(benchmark::State& state, models::ExecutionPlanFactory model) {
+    GEMMEnd2EndBenchmark(state, model,
+      xnn_f32_gemm_minmax_ukernel_7x2v__rvv,
+      xnn_f32_igemm_minmax_ukernel_7x2v__rvv,
+      xnn_f32_gemm_minmax_ukernel_1x2v__rvv,
+      xnn_f32_igemm_minmax_ukernel_1x2v__rvv,
+      nullptr /* gemm_relu */, nullptr /* igemm_relu */, nullptr /* gemm1_relu */, nullptr /* igemm1_relu */,
+      nullptr /* gemm */, nullptr /* igemm */, nullptr /* gemm1 */, nullptr /* igemm1 */,
+      xnn_init_f32_minmax_scalar_params,
+      /*mr=*/7, /*nr=*/2 * xnn_init_hardware_config()->vlenb / sizeof(float));
+  }
+BENCHMARK_FP32_END2END(f32_gemm_minmax_ukernel_1x2v__rvv);
+#endif
 
 static void f32_gemm_2x4__scalar(benchmark::State& state, models::ExecutionPlanFactory model) {
   GEMMEnd2EndBenchmark(state, model,
