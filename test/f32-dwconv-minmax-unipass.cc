@@ -341,6 +341,161 @@ std::vector<DWConvTestParams> CreateTests2(
   return tests;
 }
 
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+  std::vector<DWConvTestParams> CreateTests3(
+      size_t c_block, size_t adj_c_block, size_t cr, size_t kr,
+      std::function<void(DWConvMicrokernelTester& tester)> test_func,
+      std::function<void()> isa_check = nullptr) {
+    cr = cr * xnn_init_hardware_config()->vlenb / sizeof(float);
+    c_block = c_block * xnn_init_hardware_config()->vlenb / sizeof(float);
+    const std::string cbs = std::to_string(c_block);
+    const std::string acbs = std::to_string(adj_c_block);
+
+    std::vector<DWConvTestParams> tests;
+    tests.reserve(18);
+
+    tests.push_back(DWConvTestParams(
+        "c_eq_" + cbs,
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .channels(c_block)
+        , test_func, isa_check));
+
+    if (c_block > 1) {
+      tests.push_back(DWConvTestParams(
+          "c_div_" + cbs,
+          DWConvMicrokernelTester()
+              .channel_tile(cr)
+              .kernel_tile(kr)
+          , test_func, isa_check)
+          .loop_channels(adj_c_block + c_block, cr * 16 - 1, cr * 3));
+
+      tests.push_back(DWConvTestParams(
+          "c_div_" + cbs + "_with_qmin",
+          DWConvMicrokernelTester()
+              .channel_tile(cr)
+              .kernel_tile(kr)
+              .qmin(128)
+          , test_func, isa_check)
+          .loop_channels(adj_c_block + c_block, cr * 16 - 1, cr * 3));
+
+      tests.push_back(DWConvTestParams(
+          "c_div_" + cbs + "_with_qmax",
+          DWConvMicrokernelTester()
+              .channel_tile(cr)
+              .kernel_tile(kr)
+              .qmax(128)
+          , test_func, isa_check)
+          .loop_channels(adj_c_block + c_block, cr * 16 - 1, cr * 3));
+
+      tests.push_back(DWConvTestParams(
+          "c_lt_" + acbs,
+          DWConvMicrokernelTester()
+              .channel_tile(cr)
+              .kernel_tile(kr)
+          , test_func, isa_check)
+        .loop_channels(1, adj_c_block - 1));
+    }
+
+    tests.push_back(DWConvTestParams(
+        "c_gt_" + acbs,
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+        , test_func, isa_check)
+        .loop_channels(adj_c_block + 1, (c_block == 1 ? 10 : adj_c_block + c_block) - 1));
+
+    tests.push_back(DWConvTestParams(
+        "c_gt_" + acbs + "_with_qmin",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .qmin(128)
+        , test_func, isa_check)
+        .loop_channels(adj_c_block + 1, (c_block == 1 ? 10 : adj_c_block + c_block) - 1));
+
+    tests.push_back(DWConvTestParams(
+        "c_gt_" + acbs + "_with_qmax",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .qmax(128)
+        , test_func, isa_check)
+        .loop_channels(adj_c_block + 1, (c_block == 1 ? 10 : adj_c_block + c_block) - 1));
+
+    tests.push_back(DWConvTestParams(
+        "multipixel",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .width(3)
+        , test_func, isa_check)
+        .loop_channels(1, c_block * 5, std::max(size_t(1), c_block - 1)));
+
+    tests.push_back(DWConvTestParams(
+        "multipixel_with_step",
+          DWConvMicrokernelTester()
+              .channel_tile(cr)
+              .kernel_tile(kr)
+              .width(3)
+          , test_func, isa_check)
+          .loop_channels(1, c_block * 5, std::max(size_t(1), c_block - 1))
+          .loop_step(2, kr));
+
+    tests.push_back(DWConvTestParams(
+        "multipixel_with_output_stride",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .width(5)
+            .output_stride(xnnpack::NextPrime(cr * 5 + 1))
+        , test_func, isa_check)
+        .loop_channels(1, c_block * 5, std::max(size_t(1), c_block - 1)));
+
+    tests.push_back(DWConvTestParams(
+        "multipixel_with_qmin",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .width(3)
+            .qmin(128)
+        , test_func, isa_check)
+      .loop_channels(1, c_block * 5, std::max(size_t(1), c_block - 1)));
+
+    tests.push_back(DWConvTestParams(
+        "multipixel_with_qmax",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .width(3)
+            .qmax(128)
+        , test_func, isa_check)
+        .loop_channels(1, c_block * 5, std::max(size_t(1), c_block - 1)));
+
+    tests.push_back(DWConvTestParams(
+        "input_offset",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .input_offset(xnnpack::NextPrime(cr + 1) * 16)
+        , test_func, isa_check)
+        .loop_channels(adj_c_block + c_block, cr * 16 - 1, cr * 3));
+
+    tests.push_back(DWConvTestParams(
+        "zero",
+        DWConvMicrokernelTester()
+            .channel_tile(cr)
+            .kernel_tile(kr)
+            .input_offset(xnnpack::NextPrime(cr + 1) * 16)
+        , test_func, isa_check)
+        .loop_zi(0, kr - 1)
+        .loop_channels(adj_c_block + c_block, cr * 16 - 1, cr * 3));
+
+    return tests;
+  }
+#endif  // XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+
 }  // namespace
 
 
@@ -3657,6 +3812,24 @@ std::vector<DWConvTestParams> CreateTests2(
           /*c_block=*/8, /*adj_c_block=*/8, /*cr=*/8, /*kr=*/25,
           [](DWConvMicrokernelTester& tester) {
             tester.Test(xnn_f32_dwconv_minmax_ukernel_25p8c__rvv_acc2,
+                        xnn_init_f32_minmax_scalar_params);
+          },
+          []() {
+            TEST_REQUIRES_RISCV_VECTOR;
+          })),
+      [](const testing::TestParamInfo<DWConvTest::ParamType>& info) {
+        return info.param.test_name;
+      });
+#endif  // XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+
+
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+  INSTANTIATE_TEST_SUITE_P(
+      F32_DWCONV_MINMAX_3P8CV__RVV, DWConvTest,
+      testing::ValuesIn(CreateTests3(
+          /*c_block=*/8, /*adj_c_block=*/8, /*cr=*/8, /*kr=*/3,
+          [](DWConvMicrokernelTester& tester) {
+            tester.Test(xnn_f32_dwconv_minmax_ukernel_3p8cv__rvv,
                         xnn_init_f32_minmax_scalar_params);
           },
           []() {

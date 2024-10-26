@@ -2648,6 +2648,47 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 
+#if XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+  INSTANTIATE_TEST_SUITE_P(
+      F32_IGEMM_MINMAX_1X1V__RVV, GemmTest,
+      testing::ValuesIn(CreateTests3(
+          /*k_block=*/1,
+          /*adj_k_block=*/1,
+          /*mr=*/1, /*nr=*/1, /*kr=*/1, /*sr=*/1,
+          /*is_igemm=*/true,
+          [](GemmMicrokernelTester& tester) {
+            tester.Test(xnn_f32_igemm_minmax_ukernel_1x1v__rvv,
+                        xnn_init_f32_minmax_scalar_params,
+                        xnn_pack_f32_conv_goki_w);
+          },
+          []() {
+            TEST_REQUIRES_RISCV_VECTOR;
+          })),
+      [](const testing::TestParamInfo<GemmTest::ParamType>& info) {
+        return info.param.test_name;
+      });
+
+  INSTANTIATE_TEST_SUITE_P(
+      F32_IGEMM_MINMAX_7X1V__RVV, GemmTest,
+      testing::ValuesIn(CreateTests3(
+          /*k_block=*/1,
+          /*adj_k_block=*/1,
+          /*mr=*/7, /*nr=*/1, /*kr=*/1, /*sr=*/1,
+          /*is_igemm=*/true,
+          [](GemmMicrokernelTester& tester) {
+            tester.Test(xnn_f32_igemm_minmax_ukernel_7x1v__rvv,
+                        xnn_init_f32_minmax_scalar_params,
+                        xnn_pack_f32_conv_goki_w);
+          },
+          []() {
+            TEST_REQUIRES_RISCV_VECTOR;
+          })),
+      [](const testing::TestParamInfo<GemmTest::ParamType>& info) {
+        return info.param.test_name;
+      });
+#endif  // XNN_ENABLE_RISCV_VECTOR && XNN_ARCH_RISCV
+
+
 #if XNN_ENABLE_HVX && XNN_ARCH_HEXAGON
   INSTANTIATE_TEST_SUITE_P(
       F32_IGEMM_MINMAX_1X32__HVX_BROADCAST, GemmTest,
