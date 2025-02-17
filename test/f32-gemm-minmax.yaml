@@ -940,22 +940,6 @@
   init: xnn_init_f32_minmax_scalar_params
   pack: xnn_pack_f32_gemm_goi_w
   k-block: 1
-- name: xnn_f32_gemm_minmax_ukernel_1x2v__rvv
-  init: xnn_init_f32_minmax_scalar_params
-  pack: xnn_pack_f32_gemm_goi_w
-  k-block: 1
-- name: xnn_f32_gemm_minmax_ukernel_7x2v__rvv
-  init: xnn_init_f32_minmax_scalar_params
-  pack: xnn_pack_f32_gemm_goi_w
-  k-block: 1
-- name: xnn_f32_gemm_minmax_ukernel_1x1v__rvv
-  init: xnn_init_f32_minmax_scalar_params
-  pack: xnn_pack_f32_gemm_goi_w
-  k-block: 1
-- name: xnn_f32_gemm_minmax_ukernel_7x1v__rvv
-  init: xnn_init_f32_minmax_scalar_params
-  pack: xnn_pack_f32_gemm_goi_w
-  k-block: 1
 # HEXAGON
 - name: xnn_f32_gemm_minmax_ukernel_1x32__hvx_broadcast
   init: xnn_init_f32_minmax_scalar_params
