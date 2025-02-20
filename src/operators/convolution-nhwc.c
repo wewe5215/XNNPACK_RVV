@@ -494,10 +494,6 @@ static enum xnn_status create_input_T_gemm_or_igemm(
   const void* packing_params,
   int packed_weights_padding_byte,
   size_t extra_weights_bytes,
-  xnn_init_qs8_qc8w_scale_params_fn init_scale_params,
-  const float* scale_params,
-  xnn_init_qs8_qc8w_scale_params_fn init_kernel_scale_params,
-  const float* kernel_scale_params,
   const void* gemm_params,
   size_t gemm_params_size,
   const struct xnn_gemm_config* gemm_config,
@@ -928,10 +924,6 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   int input_padding_byte,
   int packed_weights_padding_byte,
   size_t extra_weights_bytes,
-  xnn_init_qs8_qc8w_scale_params_fn init_scale_params,
-  const float* scale_params,
-  xnn_init_qs8_qc8w_scale_params_fn init_kernel_scale_params,
-  const float* kernel_scale_params,
   const void* gemm_params,
   size_t gemm_params_size,
   const struct xnn_gemm_config* gemm_config,
@@ -1072,7 +1064,6 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
           log2_input_element_size, log2_filter_element_size, bias_element_size,
           pack_gemm_goi_w, pack_conv_kgo_w, pack_conv_goki_w, packing_params,
           packed_weights_padding_byte, extra_weights_bytes,
-          init_scale_params, scale_params, init_kernel_scale_params, kernel_scale_params,
           gemm_params, gemm_params_size, gemm_config,
           linear_activation, relu_activation,
           operator_type,
@@ -2158,10 +2149,6 @@ return create_input_T_convolution2d_nhwc(
   /*input_padding_byte=*/0,
   /*packed_weights_padding_byte=*/0,
   /*extra_weights_bytes=*/0,
-  /*init_scale_params=*/NULL,
-  /*scale_params=*/NULL,
-  /*init_kernel_scale_params=*/NULL,
-  /*kernel_scale_params=*/NULL,
   /*gemm_params=*/&gemm_params,
   /*gemm_params_size=*/sizeof(gemm_params),
   /*gemm_config=*/gemm_config,
@@ -2257,6 +2244,119 @@ static enum xnn_status reshape_gemm(
       .gw_stride = w_stride * round_up(group_output_channels, nr),
       .cm_stride = convolution_op->output_pixel_stride
                    << log2_output_element_size,
+      .cn_stride = nr << log2_output_element_size,
+      .gc_stride = group_output_channels << log2_output_element_size,
+      .log2_csize = log2_output_element_size,
+      .num_batch_dims = 1,
+      .ukernel = gemm_ukernel,
+  };
+  convolution_op->context.gemm.gemm.gemm.batch_dims_a[0] = groups;
+  convolution_op->context.gemm.gemm.gemm.batch_dims_b[0] = groups;
+  convolution_op->context.gemm.gemm.gemm.batch_strides_c[0] = 1;
+  memcpy(&convolution_op->context.gemm.gemm.gemm.params, &convolution_op->params, sizeof(convolution_op->context.gemm.gemm.gemm.params));
+  convolution_op->context.gemm.gemm.gemm.fused_params = &convolution_op->context.gemm.gemm.gemm.params;
+
+  size_t nc = group_output_channels;
+  if (num_threads > 1) {
+    const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
+    const size_t target_tiles_per_thread = 5;
+    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    if (max_nc < nc) {
+      nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
+    }
+  }
+
+  if (groups == 1) {
+    #if XNN_MAX_UARCH_TYPES > 1
+      if (xnn_is_hmp_gemm_ukernel(gemm_ukernel)) {
+        convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d_with_uarch;
+        convolution_op->compute[0].task_2d_tile_2d_with_id = (pthreadpool_task_2d_tile_2d_with_id_t) xnn_compute_hmp_gemm;
+      } else {
+        convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
+        convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
+      }
+    #else
+      convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
+      convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
+    #endif
+    convolution_op->compute[0].range[0] = batch_output_size;
+    convolution_op->compute[0].range[1] = group_output_channels;
+    convolution_op->compute[0].tile[0] = mr;
+    convolution_op->compute[0].tile[1] = nc;
+  } else {
+    #if XNN_MAX_UARCH_TYPES > 1
+      if (xnn_is_hmp_gemm_ukernel(gemm_ukernel)) {
+        convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d_with_uarch;
+        convolution_op->compute[0].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_hmp_grouped_gemm;
+      } else {
+        convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
+        convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
+      }
+    #else
+      convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
+      convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
+    #endif
+    convolution_op->compute[0].range[0] = groups;
+    convolution_op->compute[0].range[1] = batch_output_size;
+    convolution_op->compute[0].range[2] = group_output_channels;
+    convolution_op->compute[0].tile[0] = mr;
+    convolution_op->compute[0].tile[1] = nc;
+  }
+  convolution_op->state = xnn_run_state_needs_setup;
+
+  *workspace_size = 0;
+  *workspace_alignment = 1;
+
+  return xnn_status_success;
+}
+
+static enum xnn_status reshape_input_T_gemm(
+  xnn_operator_t convolution_op,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t extra_weights_elements_size,
+  uint32_t log2_output_element_size,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t num_threads)
+{
+  // Convolution maps directly to GEMM and doesn't use indirection buffer.
+  const size_t batch_size = convolution_op->batch_size;
+
+  const size_t output_height = convolution_op->output_height;
+  const size_t output_width = convolution_op->output_width;
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = batch_size * output_size;
+
+  const size_t groups = convolution_op->groups;
+  const size_t group_input_channels = convolution_op->group_input_channels;
+  const size_t w_stride = extra_weights_elements_size +
+    (round_up_po2(group_input_channels, convolution_op->ukernel.gemm.kr * convolution_op->ukernel.gemm.sr) << log2_filter_element_size);
+  const size_t group_output_channels = convolution_op->group_output_channels;
+
+  uint32_t mr = convolution_op->ukernel.gemm.mr;
+  const uint32_t nr = convolution_op->ukernel.gemm.nr;
+  struct xnn_hmp_gemm_ukernel *gemm_cases = convolution_op->ukernel.gemm.gemm_cases;
+
+  #if XNN_ENABLE_GEMM_M_SPECIALIZATION
+    mr = xnn_get_heuristic_mr_gemm(batch_output_size, mr, nr, gemm_cases);
+  #else
+    if (batch_output_size == 1 && gemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
+      mr = 1;
+    }
+  #endif
+
+  struct xnn_hmp_gemm_ukernel gemm_ukernel = gemm_cases[mr - 1];
+
+  convolution_op->context.gemm.gemm.gemm = (struct gemm_context){
+      .k_scaled = group_input_channels << log2_input_element_size,
+      .a_stride = convolution_op->input_pixel_stride << log2_input_element_size,
+      .ga_stride = group_input_channels << log2_input_element_size,
+      .packed_w = packed_weights(convolution_op),
+      .w_stride = w_stride,
+      .gw_stride = w_stride * round_up(group_output_channels, nr),
+      .cm_stride = convolution_op->output_pixel_stride
+                  << log2_output_element_size,
       .cn_stride = nr << log2_output_element_size,
       .gc_stride = group_output_channels << log2_output_element_size,
       .log2_csize = log2_output_element_size,
@@ -2540,6 +2640,288 @@ static enum xnn_status reshape_igemm(
         if (batch_size > 1) {
           convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_4d_tile_2d_with_uarch;
            if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_4d_tile_2d_with_id = (pthreadpool_task_4d_tile_2d_with_id_t) xnn_compute_hmp_grouped_batch_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_4d_tile_2d_with_id = (pthreadpool_task_4d_tile_2d_with_id_t) xnn_compute_hmp_grouped_batch_igemm;
+          }
+        } else {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d_with_uarch;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_hmp_grouped_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_hmp_grouped_igemm;
+          }
+        }
+      } else {
+        if (batch_size > 1) {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_4d_tile_2d;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_4d_tile_2d = (pthreadpool_task_4d_tile_2d_t) xnn_compute_grouped_batch_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_4d_tile_2d = (pthreadpool_task_4d_tile_2d_t) xnn_compute_grouped_batch_igemm;
+          }
+        } else {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_igemm;
+          }
+        }
+      }
+    #else
+      if (batch_size > 1) {
+        convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_4d_tile_2d;
+        if (dynamic_quantization) {
+          convolution_op->compute[igemm_compute_index].task_4d_tile_2d = (pthreadpool_task_4d_tile_2d_t) xnn_compute_grouped_batch_dqigemm;
+        } else {
+          convolution_op->compute[igemm_compute_index].task_4d_tile_2d = (pthreadpool_task_4d_tile_2d_t) xnn_compute_grouped_batch_igemm;
+        }
+      } else {
+        convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d;
+        if (dynamic_quantization) {
+          convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_dqigemm;
+        } else {
+          convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_igemm;
+        }
+      }
+    #endif
+    if (batch_size > 1) {
+      convolution_op->compute[igemm_compute_index].range[0] = batch_size;
+      convolution_op->compute[igemm_compute_index].range[1] = groups;
+      convolution_op->compute[igemm_compute_index].range[2] = output_size;
+      convolution_op->compute[igemm_compute_index].range[3] = group_output_channels;
+    } else {
+      convolution_op->compute[igemm_compute_index].range[0] = groups;
+      convolution_op->compute[igemm_compute_index].range[1] = output_size;
+      convolution_op->compute[igemm_compute_index].range[2] = group_output_channels;
+    }
+    convolution_op->compute[igemm_compute_index].tile[0] = mr;
+    convolution_op->compute[igemm_compute_index].tile[1] = nc;
+  }
+  convolution_op->state = xnn_run_state_needs_setup;
+
+  return xnn_status_success;
+}
+
+// gemm with im2col
+static enum xnn_status reshape_input_T_igemm(
+  xnn_operator_t convolution_op,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t extra_weights_elements_size,
+  uint32_t log2_output_element_size,
+  bool dynamic_quantization,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t num_threads)
+{
+  const size_t batch_size = convolution_op->batch_size;
+  const size_t input_height = convolution_op->input_height;
+  const size_t input_width = convolution_op->input_width;
+  const size_t groups = convolution_op->groups;
+  const size_t kernel_height = convolution_op->kernel_height;
+  const size_t kernel_width = convolution_op->kernel_width;
+  const size_t kernel_size = kernel_height * kernel_width;
+  const size_t output_height = convolution_op->output_height;
+  const size_t output_width = convolution_op->output_width;
+  const size_t output_size = output_height * output_width;
+
+  uint32_t mr = convolution_op->ukernel.igemm.mr;
+  const uint32_t nr = convolution_op->ukernel.igemm.nr;
+  struct xnn_hmp_igemm_ukernel* igemm_cases = convolution_op->ukernel.igemm.igemm_cases;
+
+  #if XNN_ENABLE_GEMM_M_SPECIALIZATION
+    mr = xnn_get_heuristic_mr_igemm(output_size, mr, nr, igemm_cases);
+  #else
+    if (output_size == 1 && igemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
+      mr = 1;
+    }
+  #endif
+
+  struct xnn_hmp_igemm_ukernel igemm_ukernel = igemm_cases[mr - 1];
+
+  const size_t tiled_output_size = round_up(output_size, mr);
+  const size_t indirection_buffer_size = sizeof(void*) * kernel_size * tiled_output_size;
+  size_t igemm_compute_index;
+  if (convolution_op->flags & XNN_FLAG_TRANSIENT_INDIRECTION_BUFFER) {
+    *workspace_size = indirection_buffer_size;
+    *workspace_alignment = XNN_ALLOCATION_ALIGNMENT;
+    igemm_compute_index = 1;
+
+    convolution_op->context.igemm.conv2d_igemm_indirection_init = (struct conv2d_igemm_indirection_init_context) {
+      .zero_buffer = convolution_op->zero_buffer,
+      .input_pixel_stride = convolution_op->input_pixel_stride << log2_input_element_size,
+      .input_height = input_height,
+      .input_width = input_width,
+      .output_height = output_height,
+      .output_width = output_width,
+      .kernel_height = kernel_height,
+      .kernel_width = kernel_width,
+      .stride_height = convolution_op->stride_height,
+      .stride_width = convolution_op->stride_width,
+      .dilation_height = convolution_op->dilation_height,
+      .dilation_width = convolution_op->dilation_width,
+      .input_padding_top = convolution_op->padding_top,
+      .input_padding_left = convolution_op->padding_left,
+    };
+
+    convolution_op->compute[0].type = xnn_parallelization_type_1d_tile_1d;
+    convolution_op->compute[0].context_offset = offsetof(struct xnn_operator, context.igemm.conv2d_igemm_indirection_init) - offsetof(struct xnn_operator, context);
+    convolution_op->compute[0].task_1d_tile_1d = (pthreadpool_task_1d_tile_1d_t) xnn_compute_conv2d_igemm_indirection;
+    convolution_op->compute[0].range[0] = tiled_output_size;
+    convolution_op->compute[0].tile[0] = mr;
+  } else {
+    *workspace_size = 0;
+    *workspace_alignment = 1;
+    igemm_compute_index = 0;
+
+    if (input_size_changed(convolution_op)) {
+      const void** indirection_buffer =
+        (const void**) xnn_reallocate_memory((void*) convolution_op->indirection_buffer, indirection_buffer_size);
+      if (indirection_buffer == NULL) {
+        xnn_log_error(
+            "failed to allocate %zu bytes for %s operator indirection buffer",
+            indirection_buffer_size, xnn_operator_type_to_string(convolution_op->type));
+        return xnn_status_out_of_memory;
+      }
+      convolution_op->indirection_buffer = indirection_buffer;
+      xnn_log_debug("allocated %zu bytes for indirection buffer in %s operator",
+                    indirection_buffer_size, xnn_operator_type_to_string(convolution_op->type));
+
+      // Set a dummy input first, the actual input offset is calculated in setup when we have the input pointer.
+      // This offset must be aligned properly because inputs and input offsets need to be aligned.
+      convolution_op->input = (void*) ((uintptr_t) convolution_op->zero_buffer + XNN_ALLOCATION_ALIGNMENT);
+      convolution_op->last_input = convolution_op->input;
+      convolution_op->last_input_height = convolution_op->input_height;
+      convolution_op->last_input_width = convolution_op->input_width;
+
+      xnn_indirection_init_conv2d(
+        /*output_tile_size=*/mr,
+        /*output_start=*/0,
+        /*output_end=*/tiled_output_size,
+        convolution_op->indirection_buffer,
+        convolution_op->input,
+        convolution_op->zero_buffer,
+        convolution_op->input_pixel_stride << log2_input_element_size,
+        convolution_op->input_height, convolution_op->input_width,
+        convolution_op->output_height, convolution_op->output_width,
+        convolution_op->kernel_height, convolution_op->kernel_width,
+        convolution_op->stride_height, convolution_op->stride_width,
+        convolution_op->dilation_height, convolution_op->dilation_width,
+        convolution_op->padding_top, convolution_op->padding_left);
+    }
+  }
+
+
+  const size_t group_input_channels = convolution_op->group_input_channels;
+  const size_t w_stride = extra_weights_elements_size +
+    (round_up_po2(group_input_channels, convolution_op->ukernel.igemm.kr * convolution_op->ukernel.igemm.sr) * kernel_size << log2_filter_element_size);
+  const size_t group_output_channels = convolution_op->group_output_channels;
+  convolution_op->context.igemm.igemm = (struct igemm_context) {
+      .ks = kernel_size,
+      .ks_scaled = kernel_size * mr * sizeof(void*),
+      .kc = group_input_channels << log2_input_element_size,
+      .w_stride = w_stride,
+      .indirect_a = convolution_op->indirection_buffer,
+      .zero = convolution_op->zero_buffer,
+      .packed_w = packed_weights(convolution_op),
+      .cm_stride = convolution_op->output_pixel_stride << log2_output_element_size,
+      .cn_stride = nr << log2_output_element_size,
+      .ga_stride = group_input_channels << log2_input_element_size,
+      .gw_stride = w_stride * round_up(group_output_channels, nr),
+      .gc_stride = group_output_channels << log2_output_element_size,
+      .ba_stride = input_height * input_width * convolution_op->input_pixel_stride << log2_input_element_size,
+      .bc_stride = output_size * convolution_op->output_pixel_stride << log2_output_element_size,
+      .log2_csize = log2_output_element_size,
+      .ukernel = igemm_ukernel,
+  };
+  memcpy(&convolution_op->context.igemm.igemm.params, &convolution_op->params, sizeof(convolution_op->context.igemm.igemm.params));
+
+  size_t nc = group_output_channels;
+  if (num_threads > 1) {
+    const size_t num_other_tiles = groups * batch_size * divide_round_up(output_size, mr);
+    const size_t target_tiles_per_thread = 5;
+    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    if (max_nc < nc) {
+      nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
+    }
+  }
+
+  if (dynamic_quantization && convolution_op->zero_size > 0) {
+    convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_1d;
+    convolution_op->compute[igemm_compute_index].task_1d = (pthreadpool_task_1d_t) xnn_compute_dq_zero_buffer_igemm;
+    convolution_op->compute[igemm_compute_index].range[0] = batch_size;
+    ++igemm_compute_index;
+  }
+  if (groups == 1) {
+    #if XNN_MAX_UARCH_TYPES > 1
+      if (xnn_is_hmp_igemm_ukernel(igemm_ukernel)) {
+        if (batch_size > 1) {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d_with_uarch;
+            if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_batch_hmp_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_batch_hmp_igemm;
+          }
+        } else {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_2d_tile_2d_with_uarch;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_2d_tile_2d_with_id = (pthreadpool_task_2d_tile_2d_with_id_t) xnn_compute_hmp_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_2d_tile_2d_with_id = (pthreadpool_task_2d_tile_2d_with_id_t) xnn_compute_hmp_igemm;
+          }
+        }
+      } else {
+        if (batch_size > 1) {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_batch_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_batch_igemm;
+          }
+        } else {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_2d_tile_2d;
+          if (dynamic_quantization) {
+            convolution_op->compute[igemm_compute_index].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_dqigemm;
+          } else {
+            convolution_op->compute[igemm_compute_index].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_igemm;
+          }
+        }
+      }
+    #else
+      if (batch_size > 1) {
+        convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_3d_tile_2d;
+        if (dynamic_quantization) {
+          convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_batch_dqigemm;
+        } else {
+          convolution_op->compute[igemm_compute_index].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_batch_igemm;
+        }
+      } else {
+        convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_2d_tile_2d;
+        if (dynamic_quantization) {
+          convolution_op->compute[igemm_compute_index].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_dqigemm;
+        } else {
+          convolution_op->compute[igemm_compute_index].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_igemm;
+        }
+      }
+    #endif
+    if (batch_size > 1) {
+      convolution_op->compute[igemm_compute_index].range[0] = batch_size;
+      convolution_op->compute[igemm_compute_index].range[1] = output_size;
+      convolution_op->compute[igemm_compute_index].range[2] = group_output_channels;
+    } else {
+      convolution_op->compute[igemm_compute_index].range[0] = output_size;
+      convolution_op->compute[igemm_compute_index].range[1] = group_output_channels;
+    }
+    convolution_op->compute[igemm_compute_index].tile[0] = mr;
+    convolution_op->compute[igemm_compute_index].tile[1] = nc;
+  } else {
+    #if XNN_MAX_UARCH_TYPES > 1
+      if (xnn_is_hmp_igemm_ukernel(igemm_ukernel)) {
+        if (batch_size > 1) {
+          convolution_op->compute[igemm_compute_index].type = xnn_parallelization_type_4d_tile_2d_with_uarch;
+          if (dynamic_quantization) {
             convolution_op->compute[igemm_compute_index].task_4d_tile_2d_with_id = (pthreadpool_task_4d_tile_2d_with_id_t) xnn_compute_hmp_grouped_batch_dqigemm;
           } else {
             convolution_op->compute[igemm_compute_index].task_4d_tile_2d_with_id = (pthreadpool_task_4d_tile_2d_with_id_t) xnn_compute_hmp_grouped_batch_igemm;
