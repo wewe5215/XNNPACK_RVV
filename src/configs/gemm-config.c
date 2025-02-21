@@ -877,6 +877,7 @@ static void init_f32_gemm_config(void) {
   #endif
 }
 
+// TODO(Wewe): add ukernels with different mr, nr
 static void init_f32_input_T_gemm_config(void) {
   #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
     const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();

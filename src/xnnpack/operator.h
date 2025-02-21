@@ -411,10 +411,6 @@ struct xnn_operator {
       struct conv2d_igemm_indirection_init_context conv2d_igemm_indirection_init;
     } igemm;
 
-    struct { // gemm with transposed input and im2col 
-      struct input_T_gemm_context igemm;
-    } input_T_igemm;
-
     struct lut_contiguous_context lut_contiguous;
     struct lut_strided_context lut_strided;
     struct max_pooling_context max_pooling;
