@@ -3730,6 +3730,57 @@ static enum xnn_status setup_convolution2d_nhwc(
   }
 }
 
+static enum xnn_status setup_input_T_convolution2d_nhwc(
+  xnn_operator_t convolution_op,
+  enum xnn_operator_type expected_operator_type,
+  void* workspace,
+  const void* input,
+  void* output,
+  const void* quantization_params,
+  uint32_t log2_input_element_size)
+{
+  if (convolution_op->type != expected_operator_type) {
+    xnn_log_error("failed to setup operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(expected_operator_type),
+      xnn_operator_type_to_string(convolution_op->type));
+    return xnn_status_invalid_parameter;
+  }
+
+  switch (convolution_op->state) {
+    case xnn_run_state_skip:
+      return xnn_status_success;
+    case xnn_run_state_invalid:
+      xnn_log_error(
+        "failed to setup %s operator: operator has not been reshaped yet",
+        xnn_operator_type_to_string(convolution_op->type));
+      return xnn_status_invalid_state;
+    case xnn_run_state_needs_setup:
+      // Operator has been reshaped, but not setup, continue with setup.
+    case xnn_run_state_ready:
+      // Operator has been reshaped, and we are setting up with different pointers.
+      break;
+  }
+
+  if (convolution_op->weights_cache != NULL && !xnn_weights_cache_is_finalized(convolution_op->weights_cache)) {
+    xnn_log_error("failed to setup %s operator: weights cache is not finalized",
+      xnn_operator_type_to_string(expected_operator_type));
+    return xnn_status_invalid_state;
+  }
+
+  convolution_op->input = input;
+  convolution_op->output = output;
+  convolution_op->quantization_params = quantization_params;
+
+  switch (convolution_op->ukernel.type) {
+    case xnn_microkernel_type_input_T_gemm:
+      return setup_gemm(convolution_op);
+    case xnn_microkernel_type_input_T_igemm:
+      return setup_igemm(convolution_op, workspace, log2_input_element_size);
+    default:
+      XNN_UNREACHABLE;
+  }
+}
+
 enum xnn_status xnn_setup_convolution2d_nhwc_qd8_f16_qc8w(
     xnn_operator_t convolution_op,
     void* workspace,
