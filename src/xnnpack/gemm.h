@@ -541,6 +541,75 @@ DECLARE_F32_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_gemm_minmax_ukernel_7x64__hvx_b
 DECLARE_F32_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_gemm_minmax_ukernel_8x32__hvx_broadcast)
 DECLARE_F32_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_gemm_minmax_ukernel_16x32__hvx_broadcast)
 
+#define DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(fn_name) \
+  XNN_INTERNAL void fn_name(                       \
+      size_t mr,                                   \
+      size_t nc,                                   \
+      size_t kc,                                   \
+      const float* a,                              \
+      size_t w_stride,                             \
+      const float* w,                              \
+      const float* bias,                           \
+      float* c,                                    \
+      size_t cm_stride,                            \
+      size_t cn_stride,                            \
+      const union xnn_f32_default_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
+
+#define DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(fn_name) \
+  XNN_INTERNAL void fn_name(                            \
+      size_t mr,                                   \
+      size_t nc,                                   \
+      size_t kc,                                   \
+      const float* a,                              \
+      size_t w_stride,                             \
+      const float* w,                              \
+      const float* bias,                           \
+      float* c,                                    \
+      size_t cm_stride,                            \
+      size_t cn_stride,                            \
+      const union xnn_f32_relu_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
+
+#define DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(fn_name) \
+  XNN_INTERNAL void fn_name(                              \
+      size_t mr,                                   \
+      size_t nc,                                   \
+      size_t kc,                                   \
+      const float* a,                              \
+      size_t w_stride,                             \
+      const float* w,                              \
+      const float* bias,                           \
+      float* c,                                    \
+      size_t cm_stride,                            \
+      size_t cn_stride,                            \
+      const union xnn_f32_minmax_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
+
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_1x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_7x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_1x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_7x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_1x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_7x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_1x8v__rvv)
+DECLARE_F32_INPUT_T_GEMM_MINMAX_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_minmax_ukernel_7x8v__rvv)
+
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_1x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_7x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_1x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_7x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_1x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_7x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_1x8v__rvv)
+DECLARE_F32_INPUT_T_GEMM_RELU_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_relu_ukernel_7x8v__rvv)
+
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_1x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x1v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_1x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x2v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_1x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x4v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_1x8v__rvv)
+DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x8v__rvv)
+
 #define DECLARE_F32_QC4W_GEMM_MINMAX_UKERNEL_FUNCTION(fn_name) \
   XNN_INTERNAL void fn_name(                                   \
       size_t mr,                                               \

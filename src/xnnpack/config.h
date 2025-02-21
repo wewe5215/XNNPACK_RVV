@@ -199,6 +199,14 @@ static inline struct xnn_hmp_gemm_ukernel xnn_init_hmp_gemm_ukernel(xnn_gemm_uke
   return ukernel;
 }
 
+static inline struct xnn_hmp_input_T_gemm_ukernel xnn_init_hmp_input_T_gemm_ukernel(xnn_input_T_gemm_ukernel_fn function) {
+  struct xnn_hmp_input_T_gemm_ukernel ukernel = {{ function }};
+  for (size_t i = 1; i < XNN_MAX_UARCH_TYPES; i++) {
+    ukernel.function[i] = function;
+  }
+  return ukernel;
+}
+
 static inline bool xnn_is_hmp_gemm_ukernel(struct xnn_hmp_gemm_ukernel ukernel) {
 #if XNN_MAX_UARCH_TYPES == 1
   return false;

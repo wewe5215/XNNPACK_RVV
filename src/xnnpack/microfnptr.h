@@ -3003,6 +3003,7 @@ struct xnn_hmp_qp8gemm_ukernel {
 struct gemm_fused_ukernels {
   union {
     struct xnn_hmp_gemm_ukernel gemm[XNN_MAX_MR];
+    struct xnn_hmp_input_T_gemm_ukernel input_T_gemm[XNN_MAX_MR];
     struct xnn_hmp_dqgemm_ukernel dqgemm[XNN_MAX_MR];
     struct xnn_hmp_qp8gemm_ukernel qp8gemm[XNN_MAX_MR];
     struct xnn_hmp_dqgemm_bl_ukernel dqgemm_bl[XNN_MAX_MR];

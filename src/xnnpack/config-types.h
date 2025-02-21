@@ -337,6 +337,31 @@ struct xnn_gemm_config {
   uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
 };
 
+struct xnn_input_T_gemm_config {
+  struct gemm_fused_ukernels minmax;
+  struct gemm_fused_ukernels relu;
+  struct gemm_fused_ukernels linear;
+  union {
+    xnn_init_f16_minmax_params_fn f16;
+    xnn_init_f32_minmax_params_fn f32;
+    // xnn_init_f16_qc4w_minmax_params_fn f16_qc4w;
+    // xnn_init_f16_qb4w_minmax_params_fn f16_qb4w;
+    // xnn_init_f32_qc4w_minmax_params_fn f32_qc4w;
+    // xnn_init_f32_qb4w_minmax_params_fn f32_qb4w;
+    // xnn_init_qs8_conv_minmax_params_fn qs8;
+    // xnn_init_qs8_qc8w_conv_minmax_params_fn qs8_qc8w;
+    // xnn_init_qu8_conv_minmax_params_fn qu8;
+  } init;
+  xnn_pack_conv_goki_w_fn pack_igemm_goki;
+  xnn_pack_conv_kgo_w_fn pack_igemm_kgo;
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t log2_kr;
+  uint8_t log2_sr;
+  uint8_t planes;  // number of 4 bit planes (1 for legacy, 2 for unzip)
+  uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
+};
+
 struct xnn_maxpool_config {
   xnn_maxpool_ukernel_fn ukernel;
   union {

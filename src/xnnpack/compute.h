@@ -431,6 +431,13 @@ struct input_T_gemm_context {
       size_t mr_block_size,
       size_t nr_block_size);
 
+  XNN_PRIVATE void xnn_compute_input_T_gemm(
+      const struct input_T_gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
+      size_t mr_block_start,
+      size_t nr_block_start,
+      size_t mr_block_size,
+      size_t nr_block_size);
+
   XNN_PRIVATE void xnn_compute_dqgemm_bl(
       const struct gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
       size_t mr_block_start,
