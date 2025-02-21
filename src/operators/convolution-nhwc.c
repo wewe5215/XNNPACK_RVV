@@ -3387,12 +3387,12 @@ static enum xnn_status reshape_input_T_convolution2d_nhwc(
   const size_t num_threads = pthreadpool_get_threads_count(threadpool);
   switch (convolution_op->ukernel.type) {
     case xnn_microkernel_type_input_T_gemm:
-      return reshape_gemm(
+      return reshape_input_T_gemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size,
           workspace_size, workspace_alignment, num_threads);
     case xnn_microkernel_type_input_T_igemm:
-      return reshape_igemm(
+      return reshape_input_T_igemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size, dynamic_quantization,
           workspace_size, workspace_alignment, num_threads);
@@ -3606,6 +3606,31 @@ enum xnn_status xnn_reshape_convolution2d_nhwc_f32(
     workspace_size, workspace_alignment,
     output_height_out, output_width_out,
     threadpool);
+}
+
+enum xnn_status xnn_reshape_input_T_convolution2d_nhwc_f32(
+  xnn_operator_t convolution_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool)
+{
+return reshape_input_T_convolution2d_nhwc(
+  convolution_op, xnn_operator_type_convolution_nhwc_f32,
+  batch_size, input_height, input_width,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_accumulator_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*extra_weights_elements_size=*/sizeof(float),
+  /*log2_output_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*dynamic_quantization=*/false,
+  workspace_size, workspace_alignment,
+  output_height_out, output_width_out,
+  threadpool);
 }
 
 static enum xnn_status setup_gemm(xnn_operator_t convolution_op)
@@ -3865,4 +3890,16 @@ enum xnn_status xnn_setup_convolution2d_nhwc_f32(
     convolution_op, xnn_operator_type_convolution_nhwc_f32,
     workspace, input, output, /*quantization_params=*/NULL,
     /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT);
+}
+
+enum xnn_status xnn_setup_input_T_convolution2d_nhwc_f32(
+  xnn_operator_t convolution_op,
+  void* workspace,
+  const float* input,
+  float* output)
+{
+return setup_input_T_convolution2d_nhwc(
+  convolution_op, xnn_operator_type_convolution_nhwc_f32,
+  workspace, input, output, /*quantization_params=*/NULL,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT);
 }
