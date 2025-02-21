@@ -552,7 +552,7 @@ static enum xnn_status create_input_T_gemm_or_igemm(
     gemm_ukernels = &gemm_config->relu;
   }
   switch (ukernel_type) {
-    case xnn_microkernel_type_gemm:
+    case xnn_microkernel_type_input_T_gemm:
       if(!weights_already_cached) {
         pack_gemm_goi_w(groups, group_output_channels, group_input_channels,
                         nr, kr, sr,
@@ -572,7 +572,7 @@ static enum xnn_status create_input_T_gemm_or_igemm(
       }
 
       break;
-    case xnn_microkernel_type_igemm:
+    case xnn_microkernel_type_input_T_igemm:
       if(!weights_already_cached) {
         if (flags & XNN_FLAG_DEPTHWISE_CONVOLUTION) {
           pack_conv_kgo_w(
@@ -1046,16 +1046,16 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
   const bool unit_subsampling = (subsampling_width | subsampling_height) == 1;
   if (kernel_size == 1 && unit_subsampling && !any_padding && !dynamic_quantization) {
-    ukernel_type = xnn_microkernel_type_gemm;
+    ukernel_type = xnn_microkernel_type_input_T_gemm;
   } else {
-    ukernel_type = xnn_microkernel_type_igemm;
+    ukernel_type = xnn_microkernel_type_input_T_igemm;
   }
   assert(ukernel_type != xnn_microkernel_type_default);
 
   size_t zero_size = 0;
   switch (ukernel_type) {
-    case xnn_microkernel_type_gemm:
-    case xnn_microkernel_type_igemm:
+    case xnn_microkernel_type_input_T_gemm:
+    case xnn_microkernel_type_input_T_igemm:
     {
       status = create_input_T_gemm_or_igemm(
           ukernel_type, kernel_size,
@@ -3386,25 +3386,15 @@ static enum xnn_status reshape_input_T_convolution2d_nhwc(
 
   const size_t num_threads = pthreadpool_get_threads_count(threadpool);
   switch (convolution_op->ukernel.type) {
-    case xnn_microkernel_type_gemm:
+    case xnn_microkernel_type_input_T_gemm:
       return reshape_gemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size,
           workspace_size, workspace_alignment, num_threads);
-    case xnn_microkernel_type_igemm:
+    case xnn_microkernel_type_input_T_igemm:
       return reshape_igemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size, dynamic_quantization,
-          workspace_size, workspace_alignment, num_threads);
-    case xnn_microkernel_type_dwconv:
-      return reshape_dwconv(
-          convolution_op,
-          log2_input_element_size, log2_accumulator_element_size, log2_output_element_size,
-          workspace_size, workspace_alignment, num_threads);
-    case xnn_microkernel_type_vmulcaddc:
-      return reshape_vmulcaddc(
-          convolution_op,
-          log2_input_element_size, log2_output_element_size,
           workspace_size, workspace_alignment, num_threads);
     default:
       XNN_UNREACHABLE;
