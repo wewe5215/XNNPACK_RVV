@@ -2051,7 +2051,7 @@ enum xnn_status xnn_create_convolution2d_nhwc_f32(
 /*
   for transposed input
   only support GEMM & GEMM with im2col currently
-  TODO : remember to add the following newly created low-level API to xnnpack.h
+  TODO(Wewe) : remember to add the following newly created low-level API to xnnpack.h
 */ 
 
 enum xnn_status xnn_create_input_T_convolution2d_nhwc_f32(
@@ -2330,8 +2330,7 @@ static enum xnn_status reshape_input_T_gemm(
 
   const size_t groups = convolution_op->groups;
   const size_t group_input_channels = convolution_op->group_input_channels;
-  const size_t w_stride = extra_weights_elements_size +
-    (round_up_po2(group_input_channels, convolution_op->ukernel.gemm.kr * convolution_op->ukernel.gemm.sr) << log2_filter_element_size);
+  const size_t w_stride = (group_input_channels << log2_filter_element_size);
   const size_t group_output_channels = convolution_op->group_output_channels;
 
   uint32_t mr = convolution_op->ukernel.gemm.mr;
@@ -3191,6 +3190,117 @@ static enum xnn_status reshape_vmulcaddc(
 }
 
 static enum xnn_status reshape_convolution2d_nhwc(
+  xnn_operator_t convolution_op,
+  enum xnn_operator_type expected_operator_type,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t log2_accumulator_element_size,
+  uint32_t extra_weights_elements_size,
+  uint32_t log2_output_element_size,
+  bool dynamic_quantization,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool)
+{
+  if (convolution_op->type != expected_operator_type) {
+    xnn_log_error("failed to reshape operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(expected_operator_type),
+      xnn_operator_type_to_string(convolution_op->type));
+    return xnn_status_invalid_parameter;
+  }
+  convolution_op->state = xnn_run_state_invalid;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error("failed to reshape %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(convolution_op->type));
+    return xnn_status_uninitialized;
+  }
+
+  if (input_width == 0 || input_height == 0) {
+    xnn_log_error(
+      "failed to reshape %s operator with %zux%zu input: input dimensions must be non-zero",
+      xnn_operator_type_to_string(convolution_op->type), input_width, input_height);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (batch_size == 0) {
+    convolution_op->state = xnn_run_state_skip;
+    return xnn_status_success;
+  }
+
+  convolution_op->batch_size = batch_size;
+  convolution_op->input_height = input_height;
+  convolution_op->input_width = input_width;
+
+  if (convolution_op->flags & XNN_FLAG_TENSORFLOW_SAME_PADDING) {
+    convolution_op->output_height = compute_output_dimension_with_tf_same_padding(
+        input_height, convolution_op->stride_height);
+    convolution_op->output_width = compute_output_dimension_with_tf_same_padding(
+        input_width, convolution_op->stride_width);
+
+    const uint32_t effective_kernel_height = (convolution_op->kernel_height - 1) * convolution_op->dilation_height + 1;
+    const uint32_t effective_kernel_width = (convolution_op->kernel_width - 1) * convolution_op->dilation_width + 1;
+    const size_t total_padding_height =
+      (convolution_op->output_height - 1) * convolution_op->stride_height + effective_kernel_height - input_height;
+    const size_t total_padding_width =
+      (convolution_op->output_width - 1) * convolution_op->stride_width + effective_kernel_width - input_width;
+    convolution_op->padding_top = total_padding_height / 2;
+    convolution_op->padding_left = total_padding_width / 2;
+    convolution_op->padding_bottom = total_padding_height - convolution_op->padding_top;
+    convolution_op->padding_right = total_padding_width - convolution_op->padding_left;
+  } else {
+    convolution_op->output_height = xnn_compute_convolution_output_dimension(
+        convolution_op->padding_top + input_height + convolution_op->padding_bottom,
+        convolution_op->kernel_height,
+        convolution_op->dilation_height,
+        convolution_op->stride_height);
+    convolution_op->output_width = xnn_compute_convolution_output_dimension(
+        convolution_op->padding_left + input_width + convolution_op->padding_right,
+        convolution_op->kernel_width,
+        convolution_op->dilation_width,
+        convolution_op->stride_width);
+  }
+
+  if (output_height_out != NULL) {
+    *output_height_out = convolution_op->output_height;
+  }
+  if (output_width_out != NULL) {
+    *output_width_out = convolution_op->output_width;
+  }
+
+  const size_t num_threads = pthreadpool_get_threads_count(threadpool);
+  switch (convolution_op->ukernel.type) {
+    case xnn_microkernel_type_gemm:
+      return reshape_gemm(
+          convolution_op,
+          log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size,
+          workspace_size, workspace_alignment, num_threads);
+    case xnn_microkernel_type_igemm:
+      return reshape_igemm(
+          convolution_op,
+          log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size, dynamic_quantization,
+          workspace_size, workspace_alignment, num_threads);
+    case xnn_microkernel_type_dwconv:
+      return reshape_dwconv(
+          convolution_op,
+          log2_input_element_size, log2_accumulator_element_size, log2_output_element_size,
+          workspace_size, workspace_alignment, num_threads);
+    case xnn_microkernel_type_vmulcaddc:
+      return reshape_vmulcaddc(
+          convolution_op,
+          log2_input_element_size, log2_output_element_size,
+          workspace_size, workspace_alignment, num_threads);
+    default:
+      XNN_UNREACHABLE;
+  }
+}
+
+static enum xnn_status reshape_input_T_convolution2d_nhwc(
   xnn_operator_t convolution_op,
   enum xnn_operator_type expected_operator_type,
   size_t batch_size,
