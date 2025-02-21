@@ -1,0 +1,86 @@
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree.
+
+$assert NR in ["m1", "m2", "m4", "m8"]
+$LMUL = int(NR[1])
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <riscv_vector.h>
+
+#include "xnnpack/packw.h"
+
+void xnn_x32_packa_gemm_ukernel_x${LMUL}v__rvv_u8(
+  size_t g,
+  size_t nc,
+  size_t kc,
+  size_t nr,
+  size_t kr,
+  size_t sr,
+  const uint32_t* weights,
+  const void* scale,
+  uint32_t* packed_weights,
+  size_t extra_bytes,
+  const void* params)
+{
+  assert(g != 0);
+  assert(nc != 0);
+  assert(kc != 0);
+  assert(nr == __riscv_vsetvlmax_e32m${LMUL}());
+  assert(kr == 1);
+  assert(sr == 1);
+  assert(weights != NULL);
+  assert(packed_weights != NULL);
+
+  uint32_t* out = packed_weights;
+  size_t kc_bstride = kc << 2;
+
+  do {
+    const uint32_t* w0 = weights;
+    $for N in range(1, 8):
+      const uint32_t* w${N} = w${N-1} + kc;
+    long int k = kc;
+    uint32_t* out0 = out;
+    do {
+      size_t vl;
+      size_t vlmax = __riscv_vsetvlmax_e32m${LMUL}();
+      if XNN_LIKELY(k >= vlmax) {
+        vl = vlmax;
+      } else {
+        vl = __riscv_vsetvl_e32m${LMUL}(k);
+      }
+      size_t n = nc;
+      $for N in range(8):
+        const uint32_t* w_ptr${N} = w${N};
+      for (; n >= 8; n -= 8) {
+        $for KB in range(8):
+            vuint32m${LMUL}_t v_w${KB} = __riscv_vle32_v_u32m${LMUL}(w_ptr${KB}, vl);
+            __riscv_vse32_v_u32m${LMUL}(out0, v_w${KB}, vl);
+            out0 += vlmax;
+        $for KB in range(8):
+            w_ptr${KB} += (kc << 3);
+      }
+
+      for (; n >= 4; n -= 4) {
+        $for KB in range(4):
+            vuint32m${LMUL}_t v_w${KB} = __riscv_vle32_v_u32m${LMUL}(w_ptr${KB}, vl);
+            __riscv_vse32_v_u32m${LMUL}(out0, v_w${KB}, vl);
+            out0 += vlmax;
+        $for KB in range(4):
+            w_ptr${KB} += (kc << 2);
+      }
+
+      for (; n >= 1; n -= 1) {
+        vuint32m${LMUL}_t v_w0 = __riscv_vle32_v_u32m${LMUL}(w_ptr0, vl);
+        __riscv_vse32_v_u32m${LMUL}(out0, v_w0, vl);
+        out0 += vlmax;
+        w_ptr0 += kc;
+      }
+      k -= nr;
+      $for KB in range(8):
+          w${KB} += nr;
+    } while(k > 0);
+  } while (--g != 0);
+}

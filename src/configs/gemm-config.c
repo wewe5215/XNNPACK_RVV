@@ -42,9 +42,10 @@ static struct xnn_gemm_config qd8_f32_qc8w_gemm_config = {0};
 static struct xnn_gemm_config qp8_f32_qc4w_gemm_config = {0};
 static struct xnn_gemm_config qs8_qc8w_gemm_config = {0};
 static struct xnn_gemm_config qu8_gemm_config = {0};
-
+static struct xnn_input_T_gemm_config f32_input_T_gemm_config = {0};
 XNN_INIT_ONCE_GUARD(f16_gemm);
 XNN_INIT_ONCE_GUARD(f32_gemm);
+XNN_INIT_ONCE_GUARD(f32_input_T_gemm);
 XNN_INIT_ONCE_GUARD(f32_gemm_nr2);
 XNN_INIT_ONCE_GUARD(f32_qc4w_gemm);
 XNN_INIT_ONCE_GUARD(f32_qc8w_gemm);
@@ -873,6 +874,29 @@ static void init_f32_gemm_config(void) {
     f32_gemm_config.pack_gemm_goi = (xnn_packw_gemm_goi_ukernel_fn) xnn_x32_packw_gemm_goi_ukernel_x4__scalar_float_u4;
     f32_gemm_config.mr = 4;
     f32_gemm_config.nr = 4;
+  #endif
+}
+
+static void init_f32_input_T_gemm_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+    assert(hardware_config != NULL);
+    if (hardware_config->use_riscv_vector) {
+      f32_input_T_gemm_config.minmax.gemm[XNN_MR_TO_INDEX(7)] = xnn_init_hmp_input_T_gemm_ukernel((xnn_gemm_ukernel_fn) xnn_f32_transpose_a_gemm_minmax_ukernel_7x4v__rvv);
+      f32_input_T_gemm_config.minmax.gemm[XNN_MR_TO_INDEX(1)] = xnn_init_hmp_input_T_gemm_ukernel((xnn_gemm_ukernel_fn) xnn_f32_transpose_a_gemm_minmax_ukernel_1x4v__rvv);
+      f32_input_T_gemm_config.init.f32 = xnn_init_f32_minmax_scalar_params;
+      f32_input_T_gemm_config.pack_gemm_gio = (xnn_packw_gemm_gio_ukernel_fn) xnn_pack_f32_gemm_gio_w;
+      f32_input_T_gemm_config.packa_gemm_x1v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x1v__rvv_u8;
+      f32_input_T_gemm_config.packa_gemm_x2v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x2v__rvv_u8;
+      f32_input_T_gemm_config.packa_gemm_x4v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x4v__rvv_u8;
+      f32_input_T_gemm_config.packa_gemm_x8v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x8v__rvv_u8;
+      f32_input_T_gemm_config.mr = 7;
+      // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
+      f32_input_T_gemm_config.nr = hardware_config->vlenb;
+      return;
+    }
+  #else
+    return;
   #endif
 }
 
@@ -3846,6 +3870,15 @@ struct xnn_gemm_config* xnn_init_f32_gemm_config() {
   }
   XNN_INIT_ONCE(f32_gemm);
   return &f32_gemm_config;
+}
+
+struct xnn_input_T_gemm_config* xnn_init_f32_input_T_gemm_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_gemm);
+  return &f32_input_T_gemm_config;
 }
 
 struct xnn_gemm_config* xnn_init_f32_gemm_nr2_config() {

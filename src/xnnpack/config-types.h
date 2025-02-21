@@ -354,6 +354,12 @@ struct xnn_input_T_gemm_config {
   } init;
   xnn_pack_conv_goki_w_fn pack_igemm_goki;
   xnn_pack_conv_kgo_w_fn pack_igemm_kgo;
+  // Deprecated. Use pack_weights_and_biases instead.
+  xnn_packw_gemm_gio_ukernel_fn pack_gemm_gio;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x1v;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x2v;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x4v;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x8v;
   uint8_t mr;
   uint8_t nr;
   uint8_t log2_kr;
