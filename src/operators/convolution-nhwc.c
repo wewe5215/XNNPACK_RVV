@@ -985,6 +985,7 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   }
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.kernel = kernel;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = bias;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_method = gemm_config->packa_gemm_x4v;
   convolution_op->padding_top = input_padding_top;
   convolution_op->padding_right = input_padding_right;
   convolution_op->padding_bottom = input_padding_bottom;
@@ -2225,9 +2226,9 @@ static enum xnn_status reshape_input_T_gemm(
   const size_t w_stride = (group_input_channels << log2_filter_element_size);
   const size_t group_output_channels = convolution_op->group_output_channels;
 
-  uint32_t mr = convolution_op->ukernel.gemm.mr;
-  const uint32_t nr = convolution_op->ukernel.gemm.nr;
-  struct xnn_hmp_gemm_ukernel *gemm_cases = convolution_op->ukernel.gemm.gemm_cases;
+  uint32_t mr = convolution_op->ukernel.input_T_gemm.mr;
+  const uint32_t nr = convolution_op->ukernel.input_T_gemm.nr;
+  struct xnn_hmp_input_T_gemm_ukernel *gemm_cases = convolution_op->ukernel.input_T_gemm.gemm_cases;
 
   #if XNN_ENABLE_GEMM_M_SPECIALIZATION
     mr = xnn_get_heuristic_mr_gemm(batch_output_size, mr, nr, gemm_cases);
@@ -2237,13 +2238,12 @@ static enum xnn_status reshape_input_T_gemm(
     }
   #endif
 
-  struct xnn_hmp_gemm_ukernel gemm_ukernel = gemm_cases[mr - 1];
+  struct xnn_hmp_input_T_gemm_ukernel gemm_ukernel = gemm_cases[mr - 1];
 
-  convolution_op->context.gemm.gemm.gemm = (struct gemm_context){
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm = (struct input_T_gemm_context){
       .k_scaled = group_input_channels << log2_input_element_size,
       .a_stride = convolution_op->input_pixel_stride << log2_input_element_size,
       .ga_stride = group_input_channels << log2_input_element_size,
-      .packed_w = packed_weights(convolution_op),
       .w_stride = w_stride,
       .gw_stride = w_stride * round_up(group_output_channels, nr),
       .cm_stride = convolution_op->output_pixel_stride
@@ -2254,11 +2254,11 @@ static enum xnn_status reshape_input_T_gemm(
       .num_batch_dims = 1,
       .ukernel = gemm_ukernel,
   };
-  convolution_op->context.gemm.gemm.gemm.batch_dims_a[0] = groups;
-  convolution_op->context.gemm.gemm.gemm.batch_dims_b[0] = groups;
-  convolution_op->context.gemm.gemm.gemm.batch_strides_c[0] = 1;
-  memcpy(&convolution_op->context.gemm.gemm.gemm.params, &convolution_op->params, sizeof(convolution_op->context.gemm.gemm.gemm.params));
-  convolution_op->context.gemm.gemm.gemm.fused_params = &convolution_op->context.gemm.gemm.gemm.params;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_dims_a[0] = groups;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_dims_b[0] = groups;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_strides_c[0] = 1;
+  memcpy(&convolution_op->context.input_T_gemm.input_T_gemm.gemm.params, &convolution_op->params, sizeof(convolution_op->context.input_T_gemm.input_T_gemm.gemm.params));
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.fused_params = &convolution_op->context.input_T_gemm.input_T_gemm.gemm.params;
 
   size_t nc = group_output_channels;
   if (num_threads > 1) {
@@ -2271,38 +2271,18 @@ static enum xnn_status reshape_input_T_gemm(
   }
 
   if (groups == 1) {
-    #if XNN_MAX_UARCH_TYPES > 1
-      if (xnn_is_hmp_gemm_ukernel(gemm_ukernel)) {
-        convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d_with_uarch;
-        convolution_op->compute[0].task_2d_tile_2d_with_id = (pthreadpool_task_2d_tile_2d_with_id_t) xnn_compute_hmp_gemm;
-      } else {
-        convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
-        convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
-      }
-    #else
-      convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
-      convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
-    #endif
-    convolution_op->compute[0].range[0] = batch_output_size;
-    convolution_op->compute[0].range[1] = group_output_channels;
+    convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
+    convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
+    convolution_op->compute[0].range[0] = group_output_channels;
+    convolution_op->compute[0].range[1] = batch_output_size;
     convolution_op->compute[0].tile[0] = mr;
     convolution_op->compute[0].tile[1] = nc;
   } else {
-    #if XNN_MAX_UARCH_TYPES > 1
-      if (xnn_is_hmp_gemm_ukernel(gemm_ukernel)) {
-        convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d_with_uarch;
-        convolution_op->compute[0].task_3d_tile_2d_with_id = (pthreadpool_task_3d_tile_2d_with_id_t) xnn_compute_hmp_grouped_gemm;
-      } else {
-        convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
-        convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
-      }
-    #else
-      convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
-      convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
-    #endif
+    convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
+    convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
     convolution_op->compute[0].range[0] = groups;
-    convolution_op->compute[0].range[1] = batch_output_size;
-    convolution_op->compute[0].range[2] = group_output_channels;
+    convolution_op->compute[0].range[1] = group_output_channels;
+    convolution_op->compute[0].range[2] = batch_output_size;
     convolution_op->compute[0].tile[0] = mr;
     convolution_op->compute[0].tile[1] = nc;
   }
@@ -3412,11 +3392,29 @@ static enum xnn_status setup_gemm(xnn_operator_t convolution_op)
   return xnn_status_success;
 }
 
-static enum xnn_status setup_input_T_gemm(xnn_operator_t convolution_op)
+static enum xnn_status setup_input_T_gemm(xnn_operator_t convolution_op, uint32_t log2_input_element_size)
 {
-  convolution_op->context.gemm.gemm.gemm.a = convolution_op->input;
-  convolution_op->context.gemm.gemm.gemm.c = convolution_op->output;
-  convolution_op->context.gemm.gemm.gemm.quantization_params = convolution_op->quantization_params;
+  const size_t batch_size = convolution_op->batch_size;
+
+  const size_t output_height = convolution_op->output_height;
+  const size_t output_width = convolution_op->output_width;
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = batch_size * output_size;
+  const uint32_t nr = convolution_op->ukernel.input_T_gemm.nr;
+  const size_t n_stride = round_up(batch_output_size, nr);
+  const size_t group = convolution_op->groups;
+  const size_t group_input_channels = convolution_op->group_input_channels;
+  const size_t packed_group_input_T_size =
+      (group_input_channels << log2_input_element_size) * n_stride;
+  const size_t aligned_total_input_T_size = round_up_po2(packed_group_input_T_size * group, XNN_ALLOCATION_ALIGNMENT);
+  void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_method(
+    group, group_input_channels, batch_output_size, nr, 1, 1, 
+    convolution_op->input, NULL, input_packed_ptr, 0, NULL
+  );
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packed_a = input_packed_ptr;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.c = convolution_op->output;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.quantization_params = convolution_op->quantization_params;
   convolution_op->state = xnn_run_state_ready;
 
   return xnn_status_success;
@@ -3599,7 +3597,7 @@ static enum xnn_status setup_input_T_convolution2d_nhwc(
 
   switch (convolution_op->ukernel.type) {
     case xnn_microkernel_type_input_T_gemm:
-      return setup_input_T_gemm(convolution_op);
+      return setup_input_T_gemm(convolution_op, log2_input_element_size);
     case xnn_microkernel_type_input_T_igemm:
       return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size);
     default:

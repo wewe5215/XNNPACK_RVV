@@ -1495,9 +1495,9 @@ typedef void (*xnn_x32_packa_gemm_ukernel_fn)(
     size_t nr,
     size_t kr,
     size_t sr,
-    const uint32_t* weights,
+    const void* weights,
     const void* scale,
-    uint32_t* packed_weights,
+    void* packed_weights,
     size_t extra_bytes,
     const void* params);
 // PACKW: PACK W (weights) for GEMM matrix multiplication

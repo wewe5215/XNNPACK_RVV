@@ -385,6 +385,7 @@ struct input_T_gemm_context {
   size_t kr;
   // The `sr` size of the current GEMM microkernel.
   size_t sr;
+  xnn_x32_packa_gemm_ukernel_fn packa_method;
   // GEMM microkernels.
   // TODO(Wewe) : add new microkernel definition for transposed input gemm
   union {
