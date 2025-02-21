@@ -381,12 +381,27 @@ struct xnn_operator {
       struct packw_gemm_goi_context packw_gemm_goi;
       struct packw_gemm_gio_context packw_gemm_gio;
     } gemm;
+
+    struct {
+      union {
+        struct input_T_gemm_context gemm;
+        struct scaled_dot_product_attention_context attention;
+      } input_T_gemm;
+      struct packw_gemm_goi_context packw_gemm_goi;
+      struct packw_gemm_gio_context packw_gemm_gio;
+    } input_T_gemm;
+
     struct global_average_pooling_nwc_context global_average_pooling_nwc;
     struct global_average_pooling_ncw_context global_average_pooling_ncw;
     struct {
       struct igemm_context igemm;
       struct conv2d_igemm_indirection_init_context conv2d_igemm_indirection_init;
     } igemm;
+
+    struct { // gemm with transposed input and im2col 
+      struct input_T_gemm_context igemm;
+    } input_T_igemm;
+
     struct lut_contiguous_context lut_contiguous;
     struct lut_strided_context lut_strided;
     struct max_pooling_context max_pooling;

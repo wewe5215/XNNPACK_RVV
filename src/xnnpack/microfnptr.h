@@ -61,6 +61,19 @@ typedef void (*xnn_gemm_ukernel_fn)(
     size_t cn_stride,
     const void* params);
 
+typedef void (*xnn_input_T_gemm_ukernel_fn)(
+    size_t mr/*mr_block_size*/,
+    size_t nc/*nr_block_size*/,
+    size_t kc/*in_ch << 2*/,
+    const float*  a,
+    size_t w_stride/*in_ch << 2*/,
+    const float*  w,
+    const float*  bias,
+    float*  c,
+    size_t cm_stride/*batch_size * height * width << 2*/,
+    size_t cn_stride/*nr << 2*/,
+    const void* params);
+
 typedef void (*xnn_dqgemm_ukernel_fn)(
     size_t mr,
     size_t nr,
@@ -2966,6 +2979,10 @@ struct xnn_hmp_dqgemm_bl_ukernel {
 struct xnn_hmp_gemm_ukernel {
   xnn_gemm_ukernel_fn function[XNN_MAX_UARCH_TYPES];
 };
+
+struct xnn_hmp_input_T_gemm_ukernel {
+    xnn_input_T_gemm_ukernel_fn function[XNN_MAX_UARCH_TYPES];
+  };
 
 struct xnn_hmp_dqigemm_ukernel {
   xnn_dqigemm_ukernel_fn function[XNN_MAX_UARCH_TYPES];
