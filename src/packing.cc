@@ -449,7 +449,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               (cond & nr));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += nr;
           output_cur += nr;
       }
@@ -668,7 +668,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(uint32_t batch_size,
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (nr - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           // std::cout << "input_cursor = " << input_cursor << "\n";
           im2col_cur += nr;
           output_cur += nr;
@@ -719,7 +719,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(uint32_t batch_size,
           int is_whole_stride_padded_part = -(output_padding_top_stride/vlmax >= 1);
           remainder = ~is_whole_stride_padded_part & output_padding_top_stride;
           uint32_t* in_ptr_now = in_ptr + input_cursor;
-          out_ptr += (is_whole_stride_padded_part & (std::min(vlmax, output_width) * group_input_channels * kernel_width));
+          out_ptr += (is_whole_stride_padded_part & (min(vlmax, output_width) * group_input_channels * kernel_width));
           output_padding_top_stride -= (is_whole_stride_padded_part & vlmax);
           for(int k_h = is_whole_stride_padded_part & input_padding_top; k_h < kernel_height; k_h++){
               int moved_input_ptr_step = 0;
@@ -902,7 +902,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(uint32_t batch_size,
           input_offset = ((~cond & (vlmax + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (vlmax - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += vlmax;
           output_cur += vlmax;
       }
@@ -953,7 +953,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(uint32_t batch_size, const size_t i
           int is_whole_stride_padded_part = -(output_padding_top_stride/vlmax >= 1);
           remainder = ~is_whole_stride_padded_part & output_padding_top_stride;
           uint32_t* in_ptr_now = in_ptr + input_cursor;
-          out_ptr += (is_whole_stride_padded_part & (std::min(vlmax, output_width) * group_input_channels * kernel_width));
+          out_ptr += (is_whole_stride_padded_part & (min(vlmax, output_width) * group_input_channels * kernel_width));
           output_padding_top_stride -= (is_whole_stride_padded_part & vlmax);
           for(int k_h = is_whole_stride_padded_part & input_padding_top; k_h < kernel_height; k_h++){
               int moved_input_ptr_step = 0;
@@ -1101,7 +1101,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(uint32_t batch_size, const size_t i
           input_offset = ((~cond & (vlmax + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (vlmax - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += vlmax;
           output_cur += vlmax;
       }
