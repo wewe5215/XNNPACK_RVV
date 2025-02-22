@@ -34,6 +34,10 @@
 extern "C" {
 #endif
 
+XNN_INLINE static int zero_max(int x) {
+  return x & ~(x >> 31);
+}
+
 XNN_INLINE static size_t min(size_t a, size_t b) {
   return XNN_UNPREDICTABLE(b < a) ? b : a;
 }

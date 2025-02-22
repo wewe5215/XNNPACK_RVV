@@ -989,9 +989,9 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   int nr = gemm_config->nr;
   if(ukernel_type == xnn_microkernel_type_input_T_igemm){
     convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s2_d1_method = gemm_config->packa_gemm_s2_d1;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_1x4v_method = gemm_config->packa_s1_d1_1x4v_method;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_2x4v_method = gemm_config->packa_s1_d1_2x4v_method;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_4x4v_method = gemm_config->packa_s1_d1_4x4v_method;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_1x4v_method = gemm_config->packa_gemm_s1_d1_1x4v;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_2x4v_method = gemm_config->packa_gemm_s1_d1_2x4v;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_4x4v_method = gemm_config->packa_gemm_s1_d1_4x4v;
   }
 
   convolution_op->padding_top = input_padding_top;
@@ -2012,20 +2012,6 @@ if (gemm_config == NULL) {
   return xnn_status_unsupported_hardware;
 }
 
-const struct xnn_gemm_config* gemm_nr2_config = xnn_init_f32_gemm_nr2_config();
-if (gemm_nr2_config == NULL) {
-  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
-                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
-  return xnn_status_unsupported_hardware;
-}
-
-if (gemm_config->nr > group_output_channels) {
-  // Default micro-kernel is suboptimal. Try to find a better micro-kernel.
-
-  if (gemm_nr2_config->minmax.igemm[gemm_config->mr].function[XNN_UARCH_DEFAULT] != NULL) {
-    gemm_config = gemm_nr2_config;
-  }
-}
 
 union xnn_f32_minmax_params gemm_params;
 if XNN_LIKELY(gemm_config->init.f32 != NULL) {
