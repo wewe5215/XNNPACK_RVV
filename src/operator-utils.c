@@ -116,6 +116,37 @@ uint32_t xnn_get_heuristic_mr_gemm(
   return best_mr;
 }
 
+static bool mr_is_available_input_T_gemm(size_t mr, struct xnn_hmp_input_T_gemm_ukernel *gemm_cases)
+{
+  return gemm_cases[mr-1].function[XNN_UARCH_DEFAULT] != NULL;
+}
+
+uint32_t xnn_get_heuristic_mr_input_T_gemm(
+  size_t batch_size, uint32_t max_mr, uint32_t nr, struct xnn_hmp_input_T_gemm_ukernel *gemm_cases)
+{
+  if (batch_size <= max_mr && mr_is_available_input_T_gemm(batch_size, gemm_cases)) {
+    // We have a microkernel with MR that is the exact match with batch_size.
+    return batch_size;
+  }
+
+  // Try to find the best fitting mr.
+  // - use a cost heuristic to calculate how much work is done by the microkernel (see calculate_microkernel_cost)
+  // - smaller cost is better
+  uint32_t best_mr = max_mr;
+  size_t best_cost = SIZE_MAX;
+  for (uint32_t mr = 1; mr <= max_mr; mr++) {
+    if (!mr_is_available_input_T_gemm(mr, gemm_cases)){
+      continue;
+    }
+    const size_t current_cost = calculate_microkernel_cost(batch_size, mr, nr);
+    if (current_cost <= best_cost) {
+      best_mr = mr;
+      best_cost = current_cost;
+    }
+  }
+  return best_mr;
+}
+
 static bool mr_is_available_igemm(size_t mr, struct xnn_hmp_igemm_ukernel *igemm_cases)
 {
   return igemm_cases[mr-1].function[XNN_UARCH_DEFAULT] != NULL;
