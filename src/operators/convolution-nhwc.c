@@ -3373,20 +3373,35 @@ static enum xnn_status setup_igemm(
 static enum xnn_status setup_input_T_igemm(
   xnn_operator_t convolution_op,
   void* workspace,
-  uint32_t log2_input_element_size)
+  uint32_t log2_input_element_size,
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn im2col_packa)
 {
-  if (convolution_op->flags & XNN_FLAG_TRANSIENT_INDIRECTION_BUFFER) {
-    convolution_op->context.igemm.igemm.a_offset = (size_t) 0;
-    convolution_op->context.igemm.igemm.indirect_a = (const void**) workspace;
-    convolution_op->context.igemm.conv2d_igemm_indirection_init.indirection_buffer = (const void**) workspace;
-    convolution_op->context.igemm.conv2d_igemm_indirection_init.input = convolution_op->input;
-  } else {
-    convolution_op->context.igemm.igemm.a_offset = (size_t) ((uintptr_t) convolution_op->input - (uintptr_t) convolution_op->last_input);
-  }
-  convolution_op->context.igemm.igemm.zero_size = convolution_op->zero_size;
-  convolution_op->context.igemm.igemm.zero_buffers = convolution_op->zero_buffers;
-  convolution_op->context.igemm.igemm.c = convolution_op->output;
-  convolution_op->context.igemm.igemm.quantization_params = convolution_op->quantization_params;
+  const size_t batch_size = convolution_op->batch_size;
+
+  const size_t output_height = convolution_op->output_height;
+  const size_t output_width = convolution_op->output_width;
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = batch_size * output_size;
+  const uint32_t nr = convolution_op->ukernel.input_T_gemm.nr;
+  const size_t n_stride = round_up(batch_output_size, nr);
+  const size_t group = convolution_op->groups;
+  const size_t kernel_height = convolution_op->kernel_height;
+  const size_t kernel_width = convolution_op->kernel_width;
+
+  const size_t group_input_channels = convolution_op->group_input_channels;
+  const size_t packed_group_input_T_size =
+      (group_input_channels * kernel_height * kernel_width << log2_input_element_size) * n_stride;
+  const size_t aligned_total_input_T_size = round_up_po2(packed_group_input_T_size * group, XNN_ALLOCATION_ALIGNMENT);
+  void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
+  im2col_packa(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+    output_height, output_width,
+    kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+    convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+    convolution_op->input, NULL
+  );
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packed_a = input_packed_ptr;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.c = convolution_op->output;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.quantization_params = convolution_op->quantization_params;
   convolution_op->state = xnn_run_state_ready;
 
   return xnn_status_success;
@@ -3522,12 +3537,24 @@ static enum xnn_status setup_input_T_convolution2d_nhwc(
   convolution_op->input = input;
   convolution_op->output = output;
   convolution_op->quantization_params = quantization_params;
-
+  const size_t nr = convolution_op->ukernel.input_T_gemm.nr;
+  const size_t output_width = convolution_op->output_width;
   switch (convolution_op->ukernel.type) {
     case xnn_microkernel_type_input_T_gemm:
       return setup_input_T_gemm(convolution_op, log2_input_element_size);
     case xnn_microkernel_type_input_T_igemm:
-      return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size);
+      if(convolution_op->stride_height == 2)
+        return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size, convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s2_d1_method);
+      else if(convolution_op->stride_height == 1){
+        if(output_width >= (nr + nr / 2) / 2)
+          return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size, convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_4x4v_method);
+        else if(output_width >= (nr / 2 + nr / 4) / 2)
+          return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size, convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_2x4v_method);
+        else
+          return setup_input_T_igemm(convolution_op, workspace, log2_input_element_size, convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_1x4v_method);
+      }
+      else
+        XNN_UNREACHABLE;
     default:
       XNN_UNREACHABLE;
   }
