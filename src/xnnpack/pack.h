@@ -64,6 +64,116 @@ XNN_INTERNAL void xnn_pack_f32_gemm_goi_w(
   size_t extra_bytes,
   const void* params);
 
+#if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+typedef void (*xnn_pack_f32_with_im2col_input_T)(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+
+XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+
+XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+
+XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+
+XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+
+// implemented by memcpy
+XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output);
+#endif
 typedef void (*xnn_pack_f16_gemm_fn)(
   size_t g,
   size_t nc,
