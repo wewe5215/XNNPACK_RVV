@@ -48,7 +48,7 @@ void xnn_f32_transpose_a_gemm_relu_ukernel_1x4v__rvv(
     }
     nc = nc - vl;
 
-    vfloat32m4_t vacc0 =  __riscv_vmv_v_v_f32m4(bias0, vl);
+    vfloat32m4_t vacc0 =  __riscv_vfmv_v_f_f32m4(bias0, vl);
 
     size_t k = kc;
     do {
