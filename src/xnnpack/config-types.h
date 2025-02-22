@@ -360,6 +360,10 @@ struct xnn_input_T_gemm_config {
   xnn_x32_packa_gemm_ukernel_fn packa_gemm_x2v;
   xnn_x32_packa_gemm_ukernel_fn packa_gemm_x4v;
   xnn_x32_packa_gemm_ukernel_fn packa_gemm_x8v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1; // stride = 2, dilation = 1
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x4v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x4v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_4x4v;
   uint8_t mr;
   uint8_t nr;
   uint8_t log2_kr;

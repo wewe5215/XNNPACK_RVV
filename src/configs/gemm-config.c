@@ -891,6 +891,10 @@ static void init_f32_input_T_gemm_config(void) {
       f32_input_T_gemm_config.packa_gemm_x2v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x2v__rvv_u8;
       f32_input_T_gemm_config.packa_gemm_x4v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x4v__rvv_u8;
       f32_input_T_gemm_config.packa_gemm_x8v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x8v__rvv_u8;
+      f32_input_T_gemm_config.packa_gemm_s2_d1 = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s2_d1;
+      f32_input_T_gemm_config.packa_gemm_s1_d1_1x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v;
+      f32_input_T_gemm_config.packa_gemm_s1_d1_2x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v;
+      f32_input_T_gemm_config.packa_gemm_s1_d1_4x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v;
       f32_input_T_gemm_config.mr = 7;
       // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
       f32_input_T_gemm_config.nr = hardware_config->vlenb;

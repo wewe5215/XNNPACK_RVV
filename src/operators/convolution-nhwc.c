@@ -986,6 +986,14 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.kernel = kernel;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = bias;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_method = gemm_config->packa_gemm_x4v;
+  int nr = gemm_config->nr;
+  if(ukernel_type == xnn_microkernel_type_input_T_igemm){
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s2_d1_method = gemm_config->packa_gemm_s2_d1;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_1x4v_method = gemm_config->packa_s1_d1_1x4v_method;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_2x4v_method = gemm_config->packa_s1_d1_2x4v_method;
+    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_4x4v_method = gemm_config->packa_s1_d1_4x4v_method;
+  }
+
   convolution_op->padding_top = input_padding_top;
   convolution_op->padding_right = input_padding_right;
   convolution_op->padding_bottom = input_padding_bottom;
@@ -2272,19 +2280,15 @@ static enum xnn_status reshape_input_T_gemm(
 
   if (groups == 1) {
     convolution_op->compute[0].type = xnn_parallelization_type_2d_tile_2d;
-    convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_gemm;
+    convolution_op->compute[0].task_2d_tile_2d = (pthreadpool_task_2d_tile_2d_t) xnn_compute_input_T_gemm;
     convolution_op->compute[0].range[0] = group_output_channels;
     convolution_op->compute[0].range[1] = batch_output_size;
     convolution_op->compute[0].tile[0] = mr;
     convolution_op->compute[0].tile[1] = nc;
   } else {
-    convolution_op->compute[0].type = xnn_parallelization_type_3d_tile_2d;
-    convolution_op->compute[0].task_3d_tile_2d = (pthreadpool_task_3d_tile_2d_t) xnn_compute_grouped_gemm;
-    convolution_op->compute[0].range[0] = groups;
-    convolution_op->compute[0].range[1] = group_output_channels;
-    convolution_op->compute[0].range[2] = batch_output_size;
-    convolution_op->compute[0].tile[0] = mr;
-    convolution_op->compute[0].tile[1] = nc;
+    xnn_log_error(
+      "group > 1 is not supported");
+    return xnn_status_unsupported_parameter;
   }
   convolution_op->state = xnn_run_state_needs_setup;
 

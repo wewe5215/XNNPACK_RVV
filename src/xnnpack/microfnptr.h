@@ -1500,6 +1500,25 @@ typedef void (*xnn_x32_packa_gemm_ukernel_fn)(
     void* packed_weights,
     size_t extra_bytes,
     const void* params);
+
+typedef void (*xnn_x32_packa_with_im2col_gemm_ukernel_fn)(
+    uint32_t batch_size,
+    const size_t input_height,
+    const size_t input_width,
+    size_t group_input_channels,
+    const int output_height,
+    const int output_width,
+    const size_t kernel_height,
+    const size_t kernel_width,
+    const size_t stride_height,
+    const size_t stride_width,
+    const int dilation_height,
+    const int dilation_width,
+    const int input_padding_top,
+    const int input_padding_left,
+    const void* input,
+    void* output);
+
 // PACKW: PACK W (weights) for GEMM matrix multiplication
 // Weights in GIO layout: Groups, Input channels, Output channels.
 typedef void (*xnn_packw_gemm_gio_ukernel_fn)(
