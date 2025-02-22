@@ -79,7 +79,7 @@ void xnn_${DATATYPE_SPEC}_transpose_a_gemm${SUFFIX}_ukernel_${MR}x${LMUL}v__rvv(
     nc = nc - vl;
 
     $for M in range(MR):  
-      vfloat32m${LMUL}_t vacc${M} =  __riscv_vfmv_v_f_f32m${LMUL}(bias${M}, vl);
+      vfloat32m${LMUL}_t vacc${M} =  __riscv_vfmv_v_f_f32m${LMUL}(*bias${M}, vl);
 
     size_t k = kc;
     do {

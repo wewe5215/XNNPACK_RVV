@@ -95,13 +95,13 @@ void xnn_f32_transpose_a_gemm_ukernel_7x8v__rvv(
     }
     nc = nc - vl;
 
-    vfloat32m8_t vacc0 =  __riscv_vfmv_v_f_f32m8(bias0, vl);
-    vfloat32m8_t vacc1 =  __riscv_vfmv_v_f_f32m8(bias1, vl);
-    vfloat32m8_t vacc2 =  __riscv_vfmv_v_f_f32m8(bias2, vl);
-    vfloat32m8_t vacc3 =  __riscv_vfmv_v_f_f32m8(bias3, vl);
-    vfloat32m8_t vacc4 =  __riscv_vfmv_v_f_f32m8(bias4, vl);
-    vfloat32m8_t vacc5 =  __riscv_vfmv_v_f_f32m8(bias5, vl);
-    vfloat32m8_t vacc6 =  __riscv_vfmv_v_f_f32m8(bias6, vl);
+    vfloat32m8_t vacc0 =  __riscv_vfmv_v_f_f32m8(*bias0, vl);
+    vfloat32m8_t vacc1 =  __riscv_vfmv_v_f_f32m8(*bias1, vl);
+    vfloat32m8_t vacc2 =  __riscv_vfmv_v_f_f32m8(*bias2, vl);
+    vfloat32m8_t vacc3 =  __riscv_vfmv_v_f_f32m8(*bias3, vl);
+    vfloat32m8_t vacc4 =  __riscv_vfmv_v_f_f32m8(*bias4, vl);
+    vfloat32m8_t vacc5 =  __riscv_vfmv_v_f_f32m8(*bias5, vl);
+    vfloat32m8_t vacc6 =  __riscv_vfmv_v_f_f32m8(*bias6, vl);
 
     size_t k = kc;
     do {
