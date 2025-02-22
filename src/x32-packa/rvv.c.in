@@ -10,7 +10,7 @@ $LMUL = int(NR[1])
 
 #include <riscv_vector.h>
 
-#include "xnnpack/packw.h"
+#include "xnnpack/packa.h"
 
 void xnn_x32_packa_gemm_ukernel_x${LMUL}v__rvv_u8(
   size_t g,
