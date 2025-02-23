@@ -171,7 +171,11 @@ struct xnn_operator {
   size_t input_pixel_stride;
   const void* input;
   const void** indirection_buffer;
-
+  // Pointer to weights (kernel and bias) that have been packed.
+  const void* kernel;
+  // Pointer to bias.
+  const void* bias;
+  xnn_x32_packa_gemm_ukernel_fn riscv_packa_method;
   size_t output_height;
   size_t output_width;
   size_t output_pixel_stride;

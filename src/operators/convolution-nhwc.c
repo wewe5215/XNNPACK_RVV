@@ -983,16 +983,11 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
     }
     memset(convolution_op->zero_buffer, input_padding_byte, zero_size);
   }
-  convolution_op->context.input_T_gemm.input_T_gemm.gemm.kernel = kernel;
-  convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = bias;
-  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_method = gemm_config->packa_gemm_x4v;
+  // TODO: move the following code related to context to reshape function, since context may be initialized there
+  convolution_op->kernel = kernel;
+  convolution_op->bias = bias;
+  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x4v;
   int nr = gemm_config->nr;
-  if(ukernel_type == xnn_microkernel_type_input_T_igemm){
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s2_d1_method = gemm_config->packa_gemm_s2_d1;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_1x4v_method = gemm_config->packa_gemm_s1_d1_1x4v;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_2x4v_method = gemm_config->packa_gemm_s1_d1_2x4v;
-    convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_s1_d1_4x4v_method = gemm_config->packa_gemm_s1_d1_4x4v;
-  }
 
   convolution_op->padding_top = input_padding_top;
   convolution_op->padding_right = input_padding_right;
@@ -2248,6 +2243,11 @@ static enum xnn_status reshape_input_T_gemm(
       .num_batch_dims = 1,
       .ukernel = gemm_ukernel,
   };
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.kernel = convolution_op->kernel;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = convolution_op->bias;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.packa_method = convolution_op->riscv_packa_method;
+  xnn_log_debug("kernel address: %p", convolution_op->kernel);
+  xnn_log_debug("bias address: %p", convolution_op->bias);
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_dims_a[0] = groups;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_dims_b[0] = groups;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.batch_strides_c[0] = 1;
@@ -2622,7 +2622,10 @@ static enum xnn_status reshape_input_T_igemm(
   };
   memcpy(&convolution_op->context.input_T_gemm.input_T_gemm.gemm.params, &convolution_op->params, sizeof(convolution_op->context.input_T_gemm.input_T_gemm.gemm.params));
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.fused_params = &convolution_op->context.input_T_gemm.input_T_gemm.gemm.params;
-
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.kernel = convolution_op->kernel;
+  convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = convolution_op->bias;
+  xnn_log_debug("kernel address: %p", convolution_op->kernel);
+  xnn_log_debug("bias address: %p", convolution_op->bias);
   size_t nc = group_output_channels;
   if (num_threads > 1) {
     const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
