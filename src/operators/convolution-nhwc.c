@@ -2235,8 +2235,7 @@ static enum xnn_status reshape_input_T_gemm(
       .ga_stride = group_input_channels << log2_input_element_size,
       .w_stride = w_stride,
       .gw_stride = w_stride * round_up(group_output_channels, nr),
-      .cm_stride = convolution_op->output_pixel_stride
-                  << log2_output_element_size,
+      .cm_stride = batch_output_size << log2_output_element_size,
       .cn_stride = nr << log2_output_element_size,
       .gc_stride = group_output_channels << log2_output_element_size,
       .log2_csize = log2_output_element_size,
@@ -2607,13 +2606,12 @@ static enum xnn_status reshape_input_T_igemm(
   const size_t w_stride = group_input_channels * kernel_size << log2_filter_element_size;
   const size_t group_output_channels = convolution_op->group_output_channels;
   convolution_op->context.input_T_gemm.input_T_gemm.gemm = (struct input_T_gemm_context){
-      .k_scaled = group_input_channels << log2_input_element_size,
-      .a_stride = convolution_op->input_pixel_stride << log2_input_element_size,
+      .k_scaled = group_input_channels * kernel_size << log2_input_element_size,
+      .a_stride = group_input_channels * kernel_size << log2_input_element_size,
       .ga_stride = group_input_channels << log2_input_element_size,
       .w_stride = w_stride,
       .gw_stride = w_stride * round_up(group_output_channels, nr),
-      .cm_stride = convolution_op->output_pixel_stride
-                  << log2_output_element_size,
+      .cm_stride = batch_output_size << log2_output_element_size,
       .cn_stride = nr << log2_output_element_size,
       .gc_stride = group_output_channels << log2_output_element_size,
       .log2_csize = log2_output_element_size,
@@ -3015,34 +3013,17 @@ static enum xnn_status reshape_input_T_convolution2d_nhwc(
   convolution_op->input_height = input_height;
   convolution_op->input_width = input_width;
 
-  if (convolution_op->flags & XNN_FLAG_TENSORFLOW_SAME_PADDING) {
-    convolution_op->output_height = compute_output_dimension_with_tf_same_padding(
-        input_height, convolution_op->stride_height);
-    convolution_op->output_width = compute_output_dimension_with_tf_same_padding(
-        input_width, convolution_op->stride_width);
-
-    const uint32_t effective_kernel_height = (convolution_op->kernel_height - 1) * convolution_op->dilation_height + 1;
-    const uint32_t effective_kernel_width = (convolution_op->kernel_width - 1) * convolution_op->dilation_width + 1;
-    const size_t total_padding_height =
-      (convolution_op->output_height - 1) * convolution_op->stride_height + effective_kernel_height - input_height;
-    const size_t total_padding_width =
-      (convolution_op->output_width - 1) * convolution_op->stride_width + effective_kernel_width - input_width;
-    convolution_op->padding_top = total_padding_height / 2;
-    convolution_op->padding_left = total_padding_width / 2;
-    convolution_op->padding_bottom = total_padding_height - convolution_op->padding_top;
-    convolution_op->padding_right = total_padding_width - convolution_op->padding_left;
-  } else {
-    convolution_op->output_height = xnn_compute_convolution_output_dimension(
-        convolution_op->padding_top + input_height + convolution_op->padding_bottom,
-        convolution_op->kernel_height,
-        convolution_op->dilation_height,
-        convolution_op->stride_height);
-    convolution_op->output_width = xnn_compute_convolution_output_dimension(
-        convolution_op->padding_left + input_width + convolution_op->padding_right,
-        convolution_op->kernel_width,
-        convolution_op->dilation_width,
-        convolution_op->stride_width);
-  }
+  
+  convolution_op->output_height = xnn_compute_convolution_output_dimension(
+      convolution_op->padding_top + input_height + convolution_op->padding_bottom,
+      convolution_op->kernel_height,
+      convolution_op->dilation_height,
+      convolution_op->stride_height);
+  convolution_op->output_width = xnn_compute_convolution_output_dimension(
+      convolution_op->padding_left + input_width + convolution_op->padding_right,
+      convolution_op->kernel_width,
+      convolution_op->dilation_width,
+      convolution_op->stride_width);
 
   if (output_height_out != NULL) {
     *output_height_out = convolution_op->output_height;
@@ -3389,6 +3370,7 @@ static enum xnn_status setup_input_T_igemm(
     convolution_op->input, input_packed_ptr
   );*/
   if(convolution_op->stride_height == 2){
+    xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1");
   	xnn_x32_packa_in_T_gemm_im2col_s2_d1(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
     	output_height, output_width,
     	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
@@ -3398,6 +3380,7 @@ static enum xnn_status setup_input_T_igemm(
   }
   else if(convolution_op->stride_height == 1){
   	if(output_width >= (nr + nr / 2) / 2){
+    xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v");
 		xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
         	output_height, output_width,
         	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
@@ -3406,6 +3389,7 @@ static enum xnn_status setup_input_T_igemm(
         	);
   	}	
   	else if(output_width >= (nr / 2 + nr / 4) / 2){
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v");
   		xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
                 output_height, output_width,
                 kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
@@ -3414,12 +3398,13 @@ static enum xnn_status setup_input_T_igemm(
                 );
   	}
   	else{
-		xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
-                output_height, output_width,
-                kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
-                convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-                convolution_op->input, input_packed_ptr
-                );
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v");
+      xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+                  output_height, output_width,
+                  kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+                  convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+                  convolution_op->input, input_packed_ptr
+                  );
   	}
   }
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.packed_a = input_packed_ptr;
