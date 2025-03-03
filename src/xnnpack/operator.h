@@ -185,6 +185,8 @@ struct xnn_operator {
   const void* kernel;
   // Pointer to bias.
   const void* bias;
+  // Pointer to indice for pruning
+  const void* indice;
   xnn_x32_packa_gemm_ukernel_fn riscv_packa_method;
   size_t output_height;
   size_t output_width;
