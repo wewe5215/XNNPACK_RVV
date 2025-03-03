@@ -3380,6 +3380,106 @@ enum xnn_status xnn_create_input_T_convolution2d_nhwc_f32(
   xnn_code_cache_t code_cache,
   xnn_weights_cache_t weights_cache,
   xnn_operator_t* convolution_op_out);
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x1v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out);
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x2v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out);
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x4v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out);
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x8v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out);
 // Forward declare.
 struct xnn_post_operation;
 
@@ -3431,6 +3531,18 @@ enum xnn_status xnn_reshape_input_T_convolution2d_nhwc_f32(
   size_t* output_width_out,
   pthreadpool_t threadpool);
 
+enum xnn_status xnn_reshape_input_T_pruned_convolution2d_nhwc_f32(
+  xnn_operator_t convolution_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool,
+  float pruning_ratio);
+
 enum xnn_status xnn_setup_convolution2d_nhwc_f32(
   xnn_operator_t convolution_op,
   void* workspace,
@@ -3442,6 +3554,14 @@ enum xnn_status xnn_setup_input_T_convolution2d_nhwc_f32(
   void* workspace,
   const float* input,
   float* output);
+
+enum xnn_status xnn_setup_input_T_pruned_convolution2d_nhwc_f32(
+  xnn_operator_t convolution_op,
+  void* workspace,
+  const float* input,
+  float* output,
+  const uint16_t* indice,
+  const size_t lmul);
 
 enum xnn_status xnn_create_convolution2d_nhwc_qd8_f16_qc8w(
     uint32_t input_padding_top, uint32_t input_padding_right,
