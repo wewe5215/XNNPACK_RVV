@@ -501,6 +501,31 @@ context->ukernel.function[XNN_UARCH_DEFAULT](
     context->fused_params);
 }
 
+void xnn_compute_input_T_pruned_gemm(
+  const struct input_T_pruned_gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
+  size_t mr_block_start,
+  size_t nr_block_start,
+  size_t mr_block_size,
+  size_t nr_block_size)
+{
+const size_t w_stride  = context->w_stride;
+const size_t cm_stride = context->cm_stride;
+
+context->ukernel.function[XNN_UARCH_DEFAULT](
+    mr_block_size,
+    nr_block_size,
+    context->k_scaled,
+    (const void*) ((uintptr_t) context->packed_a + nr_block_start * context->a_stride),
+    w_stride,
+    (const void*) ((uintptr_t) context->kernel + mr_block_start * w_stride),
+    (const void*) ((uintptr_t) context->bias + (mr_block_start << context->log2_csize)),
+    (void*) ((uintptr_t) context->c + mr_block_start * cm_stride + (nr_block_start << context->log2_csize)),
+    cm_stride,
+    context->cn_stride,
+    (const void*) ((uintptr_t) context->indice + (mr_block_start / context->mr) * context->indice_stride),
+    context->fused_params);
+}
+
 void xnn_compute_dqgemm(
     const struct gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
     size_t mr_block_start,

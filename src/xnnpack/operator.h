@@ -402,6 +402,7 @@ struct xnn_operator {
     struct {
       union {
         struct input_T_gemm_context gemm;
+        struct input_T_pruned_gemm_context pruned_gemm;
         struct scaled_dot_product_attention_context attention;
       } input_T_gemm;
       struct packw_gemm_goi_context packw_gemm_goi;

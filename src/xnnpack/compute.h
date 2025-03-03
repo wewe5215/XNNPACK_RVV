@@ -342,7 +342,6 @@ struct gemm_context {
   } params;
 };
 
-// TODO(wewe): add indice for pruning to the struct
 struct input_T_gemm_context {
   // K dimension of matrix A, scaled by size of an element in A.
   // Corresponds to the number of input channels.
@@ -391,7 +390,6 @@ struct input_T_gemm_context {
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_s1_d1_2x4v_method;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_s1_d1_4x4v_method;
   // GEMM microkernels.
-  // TODO(Wewe) : add new microkernel definition for transposed input gemm
   union {
     struct xnn_hmp_input_T_gemm_ukernel ukernel;
     // struct xnn_hmp_dqgemm_ukernel dq_ukernel;
@@ -409,6 +407,65 @@ struct input_T_gemm_context {
     // union xnn_qs8_conv_minmax_params qs8;
     // union xnn_qu8_conv_minmax_params qu8;
     // struct xnn_f16_scaleminmax_params f16;
+    union xnn_f32_minmax_params f32;
+  } params;
+};
+
+struct input_T_pruned_gemm_context {
+  // K dimension of matrix A, scaled by size of an element in A.
+  // Corresponds to the number of input channels.
+  size_t k_scaled;
+  // Pointer to Input matrix A that have been packed
+  const void* packed_a;
+  // Stride, in bytes, between each row (M) of A.
+  size_t a_stride;
+  // Stride, in bytes, between each group (G) of A.
+  size_t ga_stride;
+  // Pointer to weights (kernel and bias) that have been packed.
+  const void* kernel;
+  // Pointer to bias.
+  const void* bias;
+  // Pointer to indice for pruning
+  const void indice;
+  // Stride, in bytes, between output channel (N) of weights.
+  size_t w_stride;
+  // Stride, in bytes, between each group (G) of weights.
+  size_t gw_stride;
+  // Output matrix C.
+  void* c;
+  // Stride, in bytes, between each row (M) of C.
+  size_t cm_stride;
+  // Stride, in bytes, between columns (N) of C written.
+  size_t cn_stride;
+  // Stride, in bytes, between each group (G) of C.
+  size_t gc_stride;
+  // Size, in bytes, of each element of C.
+  uint32_t log2_csize;
+  // Number of batch dimensions in A, B, and C.
+  uint32_t num_batch_dims;
+  // Batch dimensions of the input A.
+  size_t batch_dims_a[XNN_MAX_TENSOR_DIMS];
+  // Batch dimensions of the input B.
+  size_t batch_dims_b[XNN_MAX_TENSOR_DIMS];
+  // Strides of each batch dimension of the output C.
+  size_t batch_strides_c[XNN_MAX_TENSOR_DIMS];
+  // The `mr` size of the current GEMM microkernel.
+  size_t mr;
+  // The `kr` size of the current GEMM microkernel.
+  size_t kr;
+  // The `sr` size of the current GEMM microkernel.
+  size_t sr;
+  xnn_x32_packa_gemm_ukernel_fn packa_method;
+  // GEMM microkernels.
+  union {
+    struct xnn_hmp_input_T_pruned_gemm_ukernel ukernel;
+  };
+  // Stride between each group of quantization params.
+  size_t gq_stride;
+  // Parameters for fused GEMM.
+  void* fused_params;
+  // Parameters for fused activations.
+  union {
     union xnn_f32_minmax_params f32;
   } params;
 };
@@ -442,6 +499,13 @@ struct input_T_gemm_context {
       size_t nr_block_start,
       size_t mr_block_size,
       size_t nr_block_size);
+
+  XNN_PRIVATE void xnn_compute_input_T_pruned_gemm(
+    const struct input_T_pruned_gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
+    size_t mr_block_start,
+    size_t nr_block_start,
+    size_t mr_block_size,
+    size_t nr_block_size);
 
   XNN_PRIVATE void xnn_compute_dqgemm_bl(
       const struct gemm_context context[restrict XNN_MIN_ELEMENTS(1)],
