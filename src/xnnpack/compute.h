@@ -426,13 +426,15 @@ struct input_T_pruned_gemm_context {
   // Pointer to bias.
   const void* bias;
   // Pointer to indice for pruning
-  const void indice;
+  const void* indice;
   // Stride, in bytes, between output channel (N) of weights.
   size_t w_stride;
   // Stride, in bytes, between each group (G) of weights.
   size_t gw_stride;
   // Output matrix C.
   void* c;
+  // Stride, in bytes, between pruned input channel of indice
+  size_t indice_stride;
   // Stride, in bytes, between each row (M) of C.
   size_t cm_stride;
   // Stride, in bytes, between columns (N) of C written.
