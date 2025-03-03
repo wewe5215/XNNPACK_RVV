@@ -540,6 +540,238 @@ error:
   return status;
 }
 
+static enum xnn_status create_input_T_pruned_gemm_or_igemm_x1v(
+  enum xnn_microkernel_type ukernel_type,
+  uint32_t kernel_size,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x1v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_operator_t convolution_op,
+  size_t* zero_size)
+{
+  enum xnn_status status = xnn_status_out_of_memory;
+  const uint32_t nr = gemm_config->nr;
+  // in rvv, kr, sr are set to 1
+  const uint32_t kr = UINT32_C(1);
+  const uint32_t sr = UINT32_C(1);
+  const size_t n_stride = round_up(group_output_channels, nr);
+  const size_t k_stride = round_up_po2(group_input_channels, kr * sr);
+
+  const uint32_t cache_seed = groups ^ group_input_channels ^ group_output_channels ^ nr ^ kr ^ sr ^ ukernel_type ^ flags;
+  memcpy(&convolution_op->params, gemm_params, gemm_params_size);
+
+  const struct gemm_fused_ukernels* gemm_ukernels = &gemm_config->minmax;
+  const uint32_t mr = gemm_config->mr;
+  if (linear_activation && gemm_config->linear.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->linear;
+  } else if (relu_activation && gemm_config->relu.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->relu;
+  }
+  convolution_op->ukernel.input_T_pruned_gemm = (struct xnn_ukernel_input_T_pruned_gemm) {
+    .mr = mr,
+    .nr = nr,
+    .kr = kr,
+    .sr = sr,
+  };
+
+  assert(XNN_MAX_MR >= mr);
+  for (size_t i = 0; i < mr; i++) {
+    convolution_op->ukernel.input_T_pruned_gemm.gemm_cases[i] = gemm_ukernels->input_T_pruned_gemm[i];
+  }
+
+  *zero_size = XNN_EXTRA_BYTES + (k_stride << log2_input_element_size);
+  return xnn_status_success;
+
+error:
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_gemm_or_igemm_x2v(
+  enum xnn_microkernel_type ukernel_type,
+  uint32_t kernel_size,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x2v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_operator_t convolution_op,
+  size_t* zero_size)
+{
+  enum xnn_status status = xnn_status_out_of_memory;
+  const uint32_t nr = gemm_config->nr;
+  // in rvv, kr, sr are set to 1
+  const uint32_t kr = UINT32_C(1);
+  const uint32_t sr = UINT32_C(1);
+  const size_t n_stride = round_up(group_output_channels, nr);
+  const size_t k_stride = round_up_po2(group_input_channels, kr * sr);
+
+  const uint32_t cache_seed = groups ^ group_input_channels ^ group_output_channels ^ nr ^ kr ^ sr ^ ukernel_type ^ flags;
+  memcpy(&convolution_op->params, gemm_params, gemm_params_size);
+
+  const struct gemm_fused_ukernels* gemm_ukernels = &gemm_config->minmax;
+  const uint32_t mr = gemm_config->mr;
+  if (linear_activation && gemm_config->linear.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->linear;
+  } else if (relu_activation && gemm_config->relu.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->relu;
+  }
+  convolution_op->ukernel.input_T_pruned_gemm = (struct xnn_ukernel_input_T_pruned_gemm) {
+    .mr = mr,
+    .nr = nr,
+    .kr = kr,
+    .sr = sr,
+  };
+
+  assert(XNN_MAX_MR >= mr);
+  for (size_t i = 0; i < mr; i++) {
+    convolution_op->ukernel.input_T_pruned_gemm.gemm_cases[i] = gemm_ukernels->input_T_pruned_gemm[i];
+  }
+
+  *zero_size = XNN_EXTRA_BYTES + (k_stride << log2_input_element_size);
+  return xnn_status_success;
+
+error:
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_gemm_or_igemm_x4v(
+  enum xnn_microkernel_type ukernel_type,
+  uint32_t kernel_size,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x4v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_operator_t convolution_op,
+  size_t* zero_size)
+{
+  enum xnn_status status = xnn_status_out_of_memory;
+  const uint32_t nr = gemm_config->nr;
+  // in rvv, kr, sr are set to 1
+  const uint32_t kr = UINT32_C(1);
+  const uint32_t sr = UINT32_C(1);
+  const size_t n_stride = round_up(group_output_channels, nr);
+  const size_t k_stride = round_up_po2(group_input_channels, kr * sr);
+
+  const uint32_t cache_seed = groups ^ group_input_channels ^ group_output_channels ^ nr ^ kr ^ sr ^ ukernel_type ^ flags;
+  memcpy(&convolution_op->params, gemm_params, gemm_params_size);
+
+  const struct gemm_fused_ukernels* gemm_ukernels = &gemm_config->minmax;
+  const uint32_t mr = gemm_config->mr;
+  if (linear_activation && gemm_config->linear.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->linear;
+  } else if (relu_activation && gemm_config->relu.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->relu;
+  }
+  convolution_op->ukernel.input_T_pruned_gemm = (struct xnn_ukernel_input_T_pruned_gemm) {
+    .mr = mr,
+    .nr = nr,
+    .kr = kr,
+    .sr = sr,
+  };
+
+  assert(XNN_MAX_MR >= mr);
+  for (size_t i = 0; i < mr; i++) {
+    convolution_op->ukernel.input_T_pruned_gemm.gemm_cases[i] = gemm_ukernels->input_T_pruned_gemm[i];
+  }
+
+  *zero_size = XNN_EXTRA_BYTES + (k_stride << log2_input_element_size);
+  return xnn_status_success;
+
+error:
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_gemm_or_igemm_x8v(
+  enum xnn_microkernel_type ukernel_type,
+  uint32_t kernel_size,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x8v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_operator_t convolution_op,
+  size_t* zero_size)
+{
+  enum xnn_status status = xnn_status_out_of_memory;
+  const uint32_t nr = gemm_config->nr;
+  // in rvv, kr, sr are set to 1
+  const uint32_t kr = UINT32_C(1);
+  const uint32_t sr = UINT32_C(1);
+  const size_t n_stride = round_up(group_output_channels, nr);
+  const size_t k_stride = round_up_po2(group_input_channels, kr * sr);
+
+  const uint32_t cache_seed = groups ^ group_input_channels ^ group_output_channels ^ nr ^ kr ^ sr ^ ukernel_type ^ flags;
+  memcpy(&convolution_op->params, gemm_params, gemm_params_size);
+
+  const struct gemm_fused_ukernels* gemm_ukernels = &gemm_config->minmax;
+  const uint32_t mr = gemm_config->mr;
+  if (linear_activation && gemm_config->linear.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->linear;
+  } else if (relu_activation && gemm_config->relu.input_T_pruned_gemm[mr - 1].function[XNN_UARCH_DEFAULT] != NULL) {
+    gemm_ukernels = &gemm_config->relu;
+  }
+  convolution_op->ukernel.input_T_pruned_gemm = (struct xnn_ukernel_input_T_pruned_gemm) {
+    .mr = mr,
+    .nr = nr,
+    .kr = kr,
+    .sr = sr,
+  };
+
+  assert(XNN_MAX_MR >= mr);
+  for (size_t i = 0; i < mr; i++) {
+    convolution_op->ukernel.input_T_pruned_gemm.gemm_cases[i] = gemm_ukernels->input_T_pruned_gemm[i];
+  }
+
+  *zero_size = XNN_EXTRA_BYTES + (k_stride << log2_input_element_size);
+  return xnn_status_success;
+
+error:
+  return status;
+}
+
 static enum xnn_status create_convolution2d_nhwc(
     uint32_t input_padding_top,
     uint32_t input_padding_right,
@@ -1012,6 +1244,714 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   if (tf_same_padding) {
     convolution_op->flags |= XNN_FLAG_TENSORFLOW_SAME_PADDING;
   }
+
+  convolution_op->state = xnn_run_state_invalid;
+
+  *convolution_op_out = convolution_op;
+  return xnn_status_success;
+
+error:
+  xnn_delete_operator(convolution_op);
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_convolution2d_nhwc_x1v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x1v,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x1v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+    
+  xnn_operator_t convolution_op = NULL;
+  enum xnn_status status = xnn_status_uninitialized;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error(
+      "failed to create %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  status = xnn_status_invalid_parameter;
+
+  if (kernel_width == 0 || kernel_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " kernel: kernel dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), kernel_width, kernel_height);
+    goto error;
+  }
+
+  if (subsampling_width == 0 || subsampling_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " subsampling: subsampling dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), subsampling_width, subsampling_height);
+    goto error;
+  }
+
+  if (dilation_width == 0 || dilation_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " dilation: dilation dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), dilation_width, dilation_height);
+    goto error;
+  }
+
+  if (groups == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 " groups: number of groups must be non-zero",
+      xnn_operator_type_to_string(operator_type), groups);
+    goto error;
+  }
+
+  if (group_input_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu input channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_input_channels);
+    goto error;
+  }
+
+  if (group_output_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu output channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_output_channels);
+    goto error;
+  }
+
+  const size_t input_channels = groups * group_input_channels;
+  if (input_channel_stride < input_channels) {
+    xnn_log_error(
+      "failed to create %s operator with input channel stride of %zu: "
+      "stride must be at least as large as the number of input channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      input_channel_stride, groups, group_input_channels);
+    goto error;
+  }
+
+  const size_t output_channels = groups * group_output_channels;
+  if (output_channel_stride < output_channels) {
+    xnn_log_error(
+      "failed to create %s operator with output channel stride of %zu: "
+      "stride must be at least as large as the number of output channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      output_channel_stride, groups, group_output_channels);
+    goto error;
+  }
+  const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom) != 0;
+
+  status = xnn_status_out_of_memory;
+
+  convolution_op = xnn_allocate_zero_simd_memory(sizeof(struct xnn_operator));
+  if (convolution_op == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator descriptor",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  convolution_op->weights_cache = weights_cache;
+
+  const size_t kernel_size = kernel_height * kernel_width;
+
+  enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
+  ukernel_type = xnn_microkernel_type_input_T_pruned_gemm;
+
+  size_t zero_size = 0;
+  status = create_input_T_pruned_gemm_or_igemm_x1v(
+      ukernel_type, kernel_size,
+      groups, group_input_channels, group_output_channels,
+      kernel, bias, flags,
+      log2_input_element_size, log2_filter_element_size, bias_element_size,
+      gemm_params, gemm_params_size, gemm_config,
+      linear_activation, relu_activation,
+      operator_type,
+      convolution_op,
+      &zero_size);
+  if (status != xnn_status_success) {
+    goto error;
+  }
+
+  // TODO: move the following code related to context to reshape function, since context may be initialized there
+  convolution_op->kernel = kernel;
+  convolution_op->bias = bias;
+  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x1v;
+  int nr = gemm_config->nr;
+
+  convolution_op->padding_top = input_padding_top;
+  convolution_op->padding_right = input_padding_right;
+  convolution_op->padding_bottom = input_padding_bottom;
+  convolution_op->padding_left = input_padding_left;
+
+  convolution_op->kernel_height = kernel_height;
+  convolution_op->kernel_width = kernel_width;
+  convolution_op->stride_height = subsampling_height;
+  convolution_op->stride_width = subsampling_width;
+  convolution_op->dilation_height = dilation_height;
+  convolution_op->dilation_width = dilation_width;
+  convolution_op->groups = groups;
+  convolution_op->group_input_channels = group_input_channels;
+  convolution_op->group_output_channels = group_output_channels;
+  convolution_op->input_pixel_stride = input_channel_stride;
+  convolution_op->output_pixel_stride = output_channel_stride;
+
+  convolution_op->type = operator_type;
+  convolution_op->ukernel.type = ukernel_type;
+  convolution_op->flags = flags & ~XNN_FLAG_TENSORFLOW_SAME_PADDING;
+
+  convolution_op->state = xnn_run_state_invalid;
+
+  *convolution_op_out = convolution_op;
+  return xnn_status_success;
+
+error:
+  xnn_delete_operator(convolution_op);
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_convolution2d_nhwc_x2v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x2v,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x2v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+    
+  xnn_operator_t convolution_op = NULL;
+  enum xnn_status status = xnn_status_uninitialized;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error(
+      "failed to create %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  status = xnn_status_invalid_parameter;
+
+  if (kernel_width == 0 || kernel_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " kernel: kernel dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), kernel_width, kernel_height);
+    goto error;
+  }
+
+  if (subsampling_width == 0 || subsampling_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " subsampling: subsampling dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), subsampling_width, subsampling_height);
+    goto error;
+  }
+
+  if (dilation_width == 0 || dilation_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " dilation: dilation dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), dilation_width, dilation_height);
+    goto error;
+  }
+
+  if (groups == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 " groups: number of groups must be non-zero",
+      xnn_operator_type_to_string(operator_type), groups);
+    goto error;
+  }
+
+  if (group_input_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu input channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_input_channels);
+    goto error;
+  }
+
+  if (group_output_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu output channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_output_channels);
+    goto error;
+  }
+
+  const size_t input_channels = groups * group_input_channels;
+  if (input_channel_stride < input_channels) {
+    xnn_log_error(
+      "failed to create %s operator with input channel stride of %zu: "
+      "stride must be at least as large as the number of input channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      input_channel_stride, groups, group_input_channels);
+    goto error;
+  }
+
+  const size_t output_channels = groups * group_output_channels;
+  if (output_channel_stride < output_channels) {
+    xnn_log_error(
+      "failed to create %s operator with output channel stride of %zu: "
+      "stride must be at least as large as the number of output channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      output_channel_stride, groups, group_output_channels);
+    goto error;
+  }
+  const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom) != 0;
+
+  status = xnn_status_out_of_memory;
+
+  convolution_op = xnn_allocate_zero_simd_memory(sizeof(struct xnn_operator));
+  if (convolution_op == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator descriptor",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  convolution_op->weights_cache = weights_cache;
+
+  const size_t kernel_size = kernel_height * kernel_width;
+
+  enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
+  ukernel_type = xnn_microkernel_type_input_T_pruned_gemm;
+
+  size_t zero_size = 0;
+  status = create_input_T_pruned_gemm_or_igemm_x2v(
+      ukernel_type, kernel_size,
+      groups, group_input_channels, group_output_channels,
+      kernel, bias, flags,
+      log2_input_element_size, log2_filter_element_size, bias_element_size,
+      gemm_params, gemm_params_size, gemm_config,
+      linear_activation, relu_activation,
+      operator_type,
+      convolution_op,
+      &zero_size);
+  if (status != xnn_status_success) {
+    goto error;
+  }
+
+  // TODO: move the following code related to context to reshape function, since context may be initialized there
+  convolution_op->kernel = kernel;
+  convolution_op->bias = bias;
+  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x2v;
+  int nr = gemm_config->nr;
+
+  convolution_op->padding_top = input_padding_top;
+  convolution_op->padding_right = input_padding_right;
+  convolution_op->padding_bottom = input_padding_bottom;
+  convolution_op->padding_left = input_padding_left;
+
+  convolution_op->kernel_height = kernel_height;
+  convolution_op->kernel_width = kernel_width;
+  convolution_op->stride_height = subsampling_height;
+  convolution_op->stride_width = subsampling_width;
+  convolution_op->dilation_height = dilation_height;
+  convolution_op->dilation_width = dilation_width;
+  convolution_op->groups = groups;
+  convolution_op->group_input_channels = group_input_channels;
+  convolution_op->group_output_channels = group_output_channels;
+  convolution_op->input_pixel_stride = input_channel_stride;
+  convolution_op->output_pixel_stride = output_channel_stride;
+
+  convolution_op->type = operator_type;
+  convolution_op->ukernel.type = ukernel_type;
+  convolution_op->flags = flags & ~XNN_FLAG_TENSORFLOW_SAME_PADDING;
+
+  convolution_op->state = xnn_run_state_invalid;
+
+  *convolution_op_out = convolution_op;
+  return xnn_status_success;
+
+error:
+  xnn_delete_operator(convolution_op);
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_convolution2d_nhwc_x4v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x4v,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x4v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+    
+  xnn_operator_t convolution_op = NULL;
+  enum xnn_status status = xnn_status_uninitialized;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error(
+      "failed to create %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  status = xnn_status_invalid_parameter;
+
+  if (kernel_width == 0 || kernel_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " kernel: kernel dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), kernel_width, kernel_height);
+    goto error;
+  }
+
+  if (subsampling_width == 0 || subsampling_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " subsampling: subsampling dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), subsampling_width, subsampling_height);
+    goto error;
+  }
+
+  if (dilation_width == 0 || dilation_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " dilation: dilation dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), dilation_width, dilation_height);
+    goto error;
+  }
+
+  if (groups == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 " groups: number of groups must be non-zero",
+      xnn_operator_type_to_string(operator_type), groups);
+    goto error;
+  }
+
+  if (group_input_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu input channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_input_channels);
+    goto error;
+  }
+
+  if (group_output_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu output channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_output_channels);
+    goto error;
+  }
+
+  const size_t input_channels = groups * group_input_channels;
+  if (input_channel_stride < input_channels) {
+    xnn_log_error(
+      "failed to create %s operator with input channel stride of %zu: "
+      "stride must be at least as large as the number of input channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      input_channel_stride, groups, group_input_channels);
+    goto error;
+  }
+
+  const size_t output_channels = groups * group_output_channels;
+  if (output_channel_stride < output_channels) {
+    xnn_log_error(
+      "failed to create %s operator with output channel stride of %zu: "
+      "stride must be at least as large as the number of output channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      output_channel_stride, groups, group_output_channels);
+    goto error;
+  }
+  const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom) != 0;
+
+  status = xnn_status_out_of_memory;
+
+  convolution_op = xnn_allocate_zero_simd_memory(sizeof(struct xnn_operator));
+  if (convolution_op == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator descriptor",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  convolution_op->weights_cache = weights_cache;
+
+  const size_t kernel_size = kernel_height * kernel_width;
+
+  enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
+  ukernel_type = xnn_microkernel_type_input_T_pruned_gemm;
+
+  size_t zero_size = 0;
+  status = create_input_T_pruned_gemm_or_igemm_x4v(
+      ukernel_type, kernel_size,
+      groups, group_input_channels, group_output_channels,
+      kernel, bias, flags,
+      log2_input_element_size, log2_filter_element_size, bias_element_size,
+      gemm_params, gemm_params_size, gemm_config,
+      linear_activation, relu_activation,
+      operator_type,
+      convolution_op,
+      &zero_size);
+  if (status != xnn_status_success) {
+    goto error;
+  }
+
+  // TODO: move the following code related to context to reshape function, since context may be initialized there
+  convolution_op->kernel = kernel;
+  convolution_op->bias = bias;
+  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x4v;
+  int nr = gemm_config->nr;
+
+  convolution_op->padding_top = input_padding_top;
+  convolution_op->padding_right = input_padding_right;
+  convolution_op->padding_bottom = input_padding_bottom;
+  convolution_op->padding_left = input_padding_left;
+
+  convolution_op->kernel_height = kernel_height;
+  convolution_op->kernel_width = kernel_width;
+  convolution_op->stride_height = subsampling_height;
+  convolution_op->stride_width = subsampling_width;
+  convolution_op->dilation_height = dilation_height;
+  convolution_op->dilation_width = dilation_width;
+  convolution_op->groups = groups;
+  convolution_op->group_input_channels = group_input_channels;
+  convolution_op->group_output_channels = group_output_channels;
+  convolution_op->input_pixel_stride = input_channel_stride;
+  convolution_op->output_pixel_stride = output_channel_stride;
+
+  convolution_op->type = operator_type;
+  convolution_op->ukernel.type = ukernel_type;
+  convolution_op->flags = flags & ~XNN_FLAG_TENSORFLOW_SAME_PADDING;
+
+  convolution_op->state = xnn_run_state_invalid;
+
+  *convolution_op_out = convolution_op;
+  return xnn_status_success;
+
+error:
+  xnn_delete_operator(convolution_op);
+  return status;
+}
+
+static enum xnn_status create_input_T_pruned_convolution2d_nhwc_x8v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const void* kernel,
+  const void* bias,
+  uint32_t flags,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x8v,
+  const void* gemm_params,
+  size_t gemm_params_size,
+  const struct xnn_input_T_pruned_x8v_gemm_config* gemm_config,
+  bool linear_activation,
+  bool relu_activation,
+  enum xnn_operator_type operator_type,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+    
+  xnn_operator_t convolution_op = NULL;
+  enum xnn_status status = xnn_status_uninitialized;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error(
+      "failed to create %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  status = xnn_status_invalid_parameter;
+
+  if (kernel_width == 0 || kernel_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " kernel: kernel dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), kernel_width, kernel_height);
+    goto error;
+  }
+
+  if (subsampling_width == 0 || subsampling_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " subsampling: subsampling dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), subsampling_width, subsampling_height);
+    goto error;
+  }
+
+  if (dilation_width == 0 || dilation_height == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 "x%" PRIu32 " dilation: dilation dimensions must be non-zero",
+      xnn_operator_type_to_string(operator_type), dilation_width, dilation_height);
+    goto error;
+  }
+
+  if (groups == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %" PRIu32 " groups: number of groups must be non-zero",
+      xnn_operator_type_to_string(operator_type), groups);
+    goto error;
+  }
+
+  if (group_input_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu input channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_input_channels);
+    goto error;
+  }
+
+  if (group_output_channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu output channels per group: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), group_output_channels);
+    goto error;
+  }
+
+  const size_t input_channels = groups * group_input_channels;
+  if (input_channel_stride < input_channels) {
+    xnn_log_error(
+      "failed to create %s operator with input channel stride of %zu: "
+      "stride must be at least as large as the number of input channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      input_channel_stride, groups, group_input_channels);
+    goto error;
+  }
+
+  const size_t output_channels = groups * group_output_channels;
+  if (output_channel_stride < output_channels) {
+    xnn_log_error(
+      "failed to create %s operator with output channel stride of %zu: "
+      "stride must be at least as large as the number of output channels (%" PRIu32 "x%zu)",
+      xnn_operator_type_to_string(operator_type),
+      output_channel_stride, groups, group_output_channels);
+    goto error;
+  }
+  const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom) != 0;
+
+  status = xnn_status_out_of_memory;
+
+  convolution_op = xnn_allocate_zero_simd_memory(sizeof(struct xnn_operator));
+  if (convolution_op == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator descriptor",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(operator_type));
+    goto error;
+  }
+
+  convolution_op->weights_cache = weights_cache;
+
+  const size_t kernel_size = kernel_height * kernel_width;
+
+  enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
+  ukernel_type = xnn_microkernel_type_input_T_pruned_gemm;
+
+  size_t zero_size = 0;
+  status = create_input_T_pruned_gemm_or_igemm_x8v(
+      ukernel_type, kernel_size,
+      groups, group_input_channels, group_output_channels,
+      kernel, bias, flags,
+      log2_input_element_size, log2_filter_element_size, bias_element_size,
+      gemm_params, gemm_params_size, gemm_config,
+      linear_activation, relu_activation,
+      operator_type,
+      convolution_op,
+      &zero_size);
+  if (status != xnn_status_success) {
+    goto error;
+  }
+
+  // TODO: move the following code related to context to reshape function, since context may be initialized there
+  convolution_op->kernel = kernel;
+  convolution_op->bias = bias;
+  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x8v;
+  int nr = gemm_config->nr;
+
+  convolution_op->padding_top = input_padding_top;
+  convolution_op->padding_right = input_padding_right;
+  convolution_op->padding_bottom = input_padding_bottom;
+  convolution_op->padding_left = input_padding_left;
+
+  convolution_op->kernel_height = kernel_height;
+  convolution_op->kernel_width = kernel_width;
+  convolution_op->stride_height = subsampling_height;
+  convolution_op->stride_width = subsampling_width;
+  convolution_op->dilation_height = dilation_height;
+  convolution_op->dilation_width = dilation_width;
+  convolution_op->groups = groups;
+  convolution_op->group_input_channels = group_input_channels;
+  convolution_op->group_output_channels = group_output_channels;
+  convolution_op->input_pixel_stride = input_channel_stride;
+  convolution_op->output_pixel_stride = output_channel_stride;
+
+  convolution_op->type = operator_type;
+  convolution_op->ukernel.type = ukernel_type;
+  convolution_op->flags = flags & ~XNN_FLAG_TENSORFLOW_SAME_PADDING;
 
   convolution_op->state = xnn_run_state_invalid;
 
@@ -1945,11 +2885,6 @@ enum xnn_status xnn_create_convolution2d_nhwc_f32(
     convolution_op_out);
 }
 
-/*
-  for transposed input
-  only support GEMM & GEMM with im2col currently
-  TODO(Wewe) : remember to add the following newly created low-level API to xnnpack.h
-*/ 
 
 enum xnn_status xnn_create_input_T_convolution2d_nhwc_f32(
   uint32_t input_padding_top,
@@ -2032,6 +2967,346 @@ return create_input_T_convolution2d_nhwc(
   /*input_padding_byte=*/0,
   /*packed_weights_padding_byte=*/0,
   /*extra_weights_bytes=*/0,
+  /*gemm_params=*/&gemm_params,
+  /*gemm_params_size=*/sizeof(gemm_params),
+  /*gemm_config=*/gemm_config,
+  /*linear_activation=*/linear_activation,
+  /*relu_activation=*/relu_activation,
+  /*operator_type=*/xnn_operator_type_convolution_nhwc_f32,
+  /*weights_cache=*/weights_cache,
+  convolution_op_out);
+}
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x1v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+if (isnan(output_min)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output lower bound: lower bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (isnan(output_max)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output upper bound: upper bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (output_min > output_max) {
+  xnn_log_error(
+    "failed to create %s operator with [%.7g, %.7g] output range: lower bound must be less than or equal to upper bound",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32), output_min, output_max);
+  return xnn_status_invalid_parameter;
+}
+
+const bool linear_activation = (output_max == INFINITY) && (output_min == -output_max);
+const bool relu_activation = (output_max == INFINITY) && (output_min == 0.0f);
+
+const struct xnn_input_T_pruned_x1v_gemm_config* gemm_config = xnn_init_f32_input_T_x1v_gemm_config();
+if (gemm_config == NULL) {
+  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_unsupported_hardware;
+}
+
+
+union xnn_f32_minmax_params gemm_params;
+if XNN_LIKELY(gemm_config->init.f32 != NULL) {
+  gemm_config->init.f32(&gemm_params, output_min, output_max);
+}
+
+
+return create_input_T_pruned_convolution2d_nhwc_x1v(
+  input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
+  kernel_height, kernel_width,
+  subsampling_height, subsampling_width,
+  dilation_height, dilation_width,
+  groups, group_input_channels, group_output_channels,
+  input_channel_stride, output_channel_stride,
+  kernel, bias, flags,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*bias_element_size=*/sizeof(float),
+  (xnn_x32_packa_gemm_ukernel_fn) gemm_config->packa_gemm_x1v,
+  /*gemm_params=*/&gemm_params,
+  /*gemm_params_size=*/sizeof(gemm_params),
+  /*gemm_config=*/gemm_config,
+  /*linear_activation=*/linear_activation,
+  /*relu_activation=*/relu_activation,
+  /*operator_type=*/xnn_operator_type_convolution_nhwc_f32,
+  /*weights_cache=*/weights_cache,
+  convolution_op_out);
+}
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x2v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+if (isnan(output_min)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output lower bound: lower bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (isnan(output_max)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output upper bound: upper bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (output_min > output_max) {
+  xnn_log_error(
+    "failed to create %s operator with [%.7g, %.7g] output range: lower bound must be less than or equal to upper bound",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32), output_min, output_max);
+  return xnn_status_invalid_parameter;
+}
+
+const bool linear_activation = (output_max == INFINITY) && (output_min == -output_max);
+const bool relu_activation = (output_max == INFINITY) && (output_min == 0.0f);
+
+const struct xnn_input_T_pruned_x2v_gemm_config* gemm_config = xnn_init_f32_input_T_x2v_gemm_config();
+if (gemm_config == NULL) {
+  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_unsupported_hardware;
+}
+
+
+union xnn_f32_minmax_params gemm_params;
+if XNN_LIKELY(gemm_config->init.f32 != NULL) {
+  gemm_config->init.f32(&gemm_params, output_min, output_max);
+}
+
+
+return create_input_T_pruned_convolution2d_nhwc_x2v(
+  input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
+  kernel_height, kernel_width,
+  subsampling_height, subsampling_width,
+  dilation_height, dilation_width,
+  groups, group_input_channels, group_output_channels,
+  input_channel_stride, output_channel_stride,
+  kernel, bias, flags,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*bias_element_size=*/sizeof(float),
+  (xnn_x32_packa_gemm_ukernel_fn) gemm_config->packa_gemm_x2v,
+  /*gemm_params=*/&gemm_params,
+  /*gemm_params_size=*/sizeof(gemm_params),
+  /*gemm_config=*/gemm_config,
+  /*linear_activation=*/linear_activation,
+  /*relu_activation=*/relu_activation,
+  /*operator_type=*/xnn_operator_type_convolution_nhwc_f32,
+  /*weights_cache=*/weights_cache,
+  convolution_op_out);
+}
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x4v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+if (isnan(output_min)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output lower bound: lower bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (isnan(output_max)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output upper bound: upper bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (output_min > output_max) {
+  xnn_log_error(
+    "failed to create %s operator with [%.7g, %.7g] output range: lower bound must be less than or equal to upper bound",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32), output_min, output_max);
+  return xnn_status_invalid_parameter;
+}
+
+const bool linear_activation = (output_max == INFINITY) && (output_min == -output_max);
+const bool relu_activation = (output_max == INFINITY) && (output_min == 0.0f);
+
+const struct xnn_input_T_pruned_x4v_gemm_config* gemm_config = xnn_init_f32_input_T_x4v_gemm_config();
+if (gemm_config == NULL) {
+  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_unsupported_hardware;
+}
+
+
+union xnn_f32_minmax_params gemm_params;
+if XNN_LIKELY(gemm_config->init.f32 != NULL) {
+  gemm_config->init.f32(&gemm_params, output_min, output_max);
+}
+
+
+return create_input_T_pruned_convolution2d_nhwc_x4v(
+  input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
+  kernel_height, kernel_width,
+  subsampling_height, subsampling_width,
+  dilation_height, dilation_width,
+  groups, group_input_channels, group_output_channels,
+  input_channel_stride, output_channel_stride,
+  kernel, bias, flags,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*bias_element_size=*/sizeof(float),
+  (xnn_x32_packa_gemm_ukernel_fn) gemm_config->packa_gemm_x4v,
+  /*gemm_params=*/&gemm_params,
+  /*gemm_params_size=*/sizeof(gemm_params),
+  /*gemm_config=*/gemm_config,
+  /*linear_activation=*/linear_activation,
+  /*relu_activation=*/relu_activation,
+  /*operator_type=*/xnn_operator_type_convolution_nhwc_f32,
+  /*weights_cache=*/weights_cache,
+  convolution_op_out);
+}
+
+enum xnn_status xnn_create_input_T_pruned_convolution2d_nhwc_f32_x8v(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t kernel_height,
+  uint32_t kernel_width,
+  uint32_t subsampling_height,
+  uint32_t subsampling_width,
+  uint32_t dilation_height,
+  uint32_t dilation_width,
+  uint32_t groups,
+  size_t group_input_channels,
+  size_t group_output_channels,
+  size_t input_channel_stride,
+  size_t output_channel_stride,
+  const float* kernel,
+  const float* bias,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_code_cache_t code_cache,
+  xnn_weights_cache_t weights_cache,
+  xnn_operator_t* convolution_op_out)
+{
+if (isnan(output_min)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output lower bound: lower bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (isnan(output_max)) {
+  xnn_log_error(
+    "failed to create %s operator with NaN output upper bound: upper bound must be non-NaN",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_invalid_parameter;
+}
+
+if (output_min > output_max) {
+  xnn_log_error(
+    "failed to create %s operator with [%.7g, %.7g] output range: lower bound must be less than or equal to upper bound",
+    xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32), output_min, output_max);
+  return xnn_status_invalid_parameter;
+}
+
+const bool linear_activation = (output_max == INFINITY) && (output_min == -output_max);
+const bool relu_activation = (output_max == INFINITY) && (output_min == 0.0f);
+
+const struct xnn_input_T_pruned_x8v_gemm_config* gemm_config = xnn_init_f32_input_T_x8v_gemm_config();
+if (gemm_config == NULL) {
+  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_unsupported_hardware;
+}
+
+
+union xnn_f32_minmax_params gemm_params;
+if XNN_LIKELY(gemm_config->init.f32 != NULL) {
+  gemm_config->init.f32(&gemm_params, output_min, output_max);
+}
+
+
+return create_input_T_pruned_convolution2d_nhwc_x8v(
+  input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
+  kernel_height, kernel_width,
+  subsampling_height, subsampling_width,
+  dilation_height, dilation_width,
+  groups, group_input_channels, group_output_channels,
+  input_channel_stride, output_channel_stride,
+  kernel, bias, flags,
+  /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*bias_element_size=*/sizeof(float),
+  (xnn_x32_packa_gemm_ukernel_fn) gemm_config->packa_gemm_x8v,
   /*gemm_params=*/&gemm_params,
   /*gemm_params_size=*/sizeof(gemm_params),
   /*gemm_config=*/gemm_config,

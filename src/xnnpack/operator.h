@@ -76,6 +76,15 @@ struct xnn_ukernel_input_T_gemm {
   uint8_t kp;
 };
 
+struct xnn_ukernel_input_T_pruned_gemm {
+  struct xnn_hmp_input_T_pruned_gemm_ukernel gemm_cases[XNN_MAX_MR];
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t kr;
+  uint8_t sr;
+  uint8_t kp;
+};
+
 struct xnn_ukernel_igemm {
   struct xnn_hmp_igemm_ukernel igemm_cases[XNN_MAX_MR];
   struct xnn_hmp_gemm_ukernel gemm_cases[XNN_MAX_MR];
@@ -118,6 +127,7 @@ struct xnn_ukernel {
       struct xnn_ukernel_gemm gemm_nr2;
     };
     struct xnn_ukernel_input_T_gemm input_T_gemm;
+    struct xnn_ukernel_input_T_pruned_gemm input_T_pruned_gemm;
     struct xnn_ukernel_igemm igemm;
     struct xnn_ukernel_spmm spmm;
     struct xnn_ukernel_vmulcaddc vmulcaddc;
