@@ -23,7 +23,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x2v__rvv(
     float*  c,
     size_t cm_stride,
     size_t cn_stride,
-    uint16_t* indice,
+    const uint16_t* indice,
     const union xnn_f32_minmax_params params[restrict XNN_MIN_ELEMENTS(1)])
 {
   assert(mr != 0);

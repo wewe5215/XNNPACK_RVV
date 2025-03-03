@@ -91,7 +91,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -206,7 +206,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -243,7 +243,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(uint32_t batch_size, const size_t
           uint32_t* in_ptr_now = in_ptr + input_cursor;
           uint32_t* in_ptr_now_real_part = in_ptr + output_size*batch + (-(remainder == 0) & input_cursor_real_part);
           // std::cout << "first: output_cur = " << output_cur << ", remainder = " << remainder << "\n";
-          out_ptr += (is_whole_stride_padded_part & (std::min(vlmax, output_width) * group_input_channels * kernel_width));
+          out_ptr += (is_whole_stride_padded_part & (min(vlmax, output_width) * group_input_channels * kernel_width));
           output_padding_top_stride -= (is_whole_stride_padded_part & vlmax);
           for(int k_h = is_whole_stride_padded_part & input_padding_top; k_h < kernel_height; k_h++){
               int moved_input_ptr_step = 0;
@@ -432,7 +432,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (vlmax + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (vlmax - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += vlmax;
           output_cur += vlmax;
           // std::cout << "end: input_offset = " << input_offset << "\n";
@@ -453,7 +453,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -568,7 +568,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -771,7 +771,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               (cond & nr));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += nr;
           output_cur += nr;
       }
@@ -786,7 +786,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -823,7 +823,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(uint32_t batch_size, const size_t
           uint32_t* in_ptr_now = in_ptr + input_cursor;
           uint32_t* in_ptr_now_real_part = in_ptr + output_size*batch + (-(remainder == 0) & input_cursor_real_part);
           // std::cout << "first: output_cur = " << output_cur << ", remainder = " << remainder << "\n";
-          out_ptr += (is_whole_stride_padded_part & (std::min(vlmax, output_width) * group_input_channels * kernel_width));
+          out_ptr += (is_whole_stride_padded_part & (min(vlmax, output_width) * group_input_channels * kernel_width));
           output_padding_top_stride -= (is_whole_stride_padded_part & vlmax);
           for(int k_h = is_whole_stride_padded_part & input_padding_top; k_h < kernel_height; k_h++){
               int moved_input_ptr_step = 0;
@@ -1011,7 +1011,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (vlmax + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (vlmax - remainder - input_padding_left + (output_width * ((remainder + (-((remainder + input_padding_left) % output_width == 0) & 1)) / output_width)))));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += vlmax;
           output_cur += vlmax;
           // std::cout << "end: input_offset = " << input_offset << "\n";
@@ -1032,7 +1032,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1(uint32_t batch_size, const size_t inpu
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -1187,7 +1187,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1406,7 +1406,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(uint32_t batch_size,
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1626,7 +1626,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(uint32_t batch_size,
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1860,7 +1860,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(uint32_t batch_size, const size_t i
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2059,7 +2059,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -2215,7 +2215,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2424,7 +2424,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               (cond & nr));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           im2col_cur += nr;
           output_cur += nr;
       }
@@ -2439,7 +2439,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2642,7 +2642,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (nr - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           // std::cout << "input_cursor = " << input_cursor << "\n";
           im2col_cur += nr;
           output_cur += nr;
@@ -2658,7 +2658,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2861,7 +2861,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (nr - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           // std::cout << "input_cursor = " << input_cursor << "\n";
           im2col_cur += nr;
           output_cur += nr;
@@ -2878,7 +2878,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  uint32_t* input, uint32_t* output){
+  const uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -3081,7 +3081,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v(uint32_t batch_size, const size_t
           input_offset = ((~cond & (nr + (~is_in_right_part2 & input_padding_left))) | \
                               ((cond) & (nr - remainder - input_padding_left)));
           input_cursor = input_cursor + input_offset;
-          out_ptr += (is_whole_stride_padded & std::min(vlmax, output_width) * group_input_channels * kernel_width);
+          out_ptr += (is_whole_stride_padded & min(vlmax, output_width) * group_input_channels * kernel_width);
           // std::cout << "input_cursor = " << input_cursor << "\n";
           im2col_cur += nr;
           output_cur += nr;

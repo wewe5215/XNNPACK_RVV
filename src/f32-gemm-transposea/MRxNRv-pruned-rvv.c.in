@@ -27,7 +27,7 @@ void xnn_${DATATYPE_SPEC}_transpose_a_pruned_gemm${SUFFIX}_ukernel_${MR}x${LMUL}
     float*  c,
     size_t cm_stride,
     size_t cn_stride,
-    uint16_t* indice,
+    const uint16_t* indice,
     const ${PARAMS} params[restrict XNN_MIN_ELEMENTS(1)])
 {
   assert(mr != 0);

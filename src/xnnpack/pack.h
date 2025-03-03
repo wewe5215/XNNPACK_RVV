@@ -80,7 +80,7 @@ typedef void (*xnn_pack_f32_with_im2col_input_T)(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 // nr = vsetvlmax_e32m1()
@@ -99,7 +99,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(
@@ -117,7 +117,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 // nr = vsetvlmax_e32m2()
@@ -136,7 +136,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v(
@@ -154,7 +154,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(
@@ -172,7 +172,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 // nr = vsetvlmax_e32m4()
@@ -191,7 +191,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(
@@ -209,7 +209,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(
@@ -227,7 +227,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(
@@ -245,7 +245,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 // implemented by memcpy
@@ -264,7 +264,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 // nr = vsetvlmax_e32m8()
@@ -283,7 +283,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v(
@@ -301,7 +301,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v(
@@ -319,7 +319,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v(
@@ -337,7 +337,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v(
@@ -355,7 +355,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v(
   const int dilation_width,
   const int input_padding_top,
   const int input_padding_left,
-  uint32_t* input,
+  const uint32_t* input,
   uint32_t* output);
 #endif
 typedef void (*xnn_pack_f16_gemm_fn)(

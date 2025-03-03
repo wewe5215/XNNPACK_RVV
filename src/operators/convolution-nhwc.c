@@ -5457,7 +5457,7 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x1v(
   void* workspace,
   const void* input,
   void* output,
-  void* indice,
+  const void* indice,
   uint32_t log2_input_element_size)
 {
   if (convolution_op->type != expected_operator_type) {
@@ -5499,8 +5499,6 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x1v(
     case xnn_microkernel_type_input_T_pruned_igemm:
       xnn_log_debug("using setup_input_T_pruned_igemm_x1v, stride = %"PRIu8", output_width =  %"PRIu8"", convolution_op->stride_height, output_width);
       return setup_input_T_pruned_igemm_x1v(convolution_op, workspace, log2_input_element_size);
-      else
-        XNN_UNREACHABLE;
     default:
       XNN_UNREACHABLE;
   }
@@ -5512,7 +5510,7 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x2v(
   void* workspace,
   const void* input,
   void* output,
-  void* indice,
+  const void* indice,
   uint32_t log2_input_element_size)
 {
   if (convolution_op->type != expected_operator_type) {
@@ -5554,8 +5552,6 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x2v(
     case xnn_microkernel_type_input_T_pruned_igemm:
       xnn_log_debug("using setup_input_T_pruned_igemm_x2v, stride = %"PRIu8", output_width =  %"PRIu8"", convolution_op->stride_height, output_width);
       return setup_input_T_pruned_igemm_x2v(convolution_op, workspace, log2_input_element_size);
-      else
-        XNN_UNREACHABLE;
     default:
       XNN_UNREACHABLE;
   }
@@ -5567,7 +5563,7 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x4v(
   void* workspace,
   const void* input,
   void* output,
-  void* indice,
+  const void* indice,
   uint32_t log2_input_element_size)
 {
   if (convolution_op->type != expected_operator_type) {
@@ -5609,8 +5605,6 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x4v(
     case xnn_microkernel_type_input_T_pruned_igemm:
       xnn_log_debug("using setup_input_T_pruned_igemm_x4v, stride = %"PRIu8", output_width =  %"PRIu8"", convolution_op->stride_height, output_width);
       return setup_input_T_pruned_igemm_x4v(convolution_op, workspace, log2_input_element_size);
-      else
-        XNN_UNREACHABLE;
     default:
       XNN_UNREACHABLE;
   }
@@ -5622,7 +5616,7 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x8v(
   void* workspace,
   const void* input,
   void* output,
-  void* indice,
+  const void* indice,
   uint32_t log2_input_element_size)
 {
   if (convolution_op->type != expected_operator_type) {
@@ -5664,8 +5658,6 @@ static enum xnn_status setup_input_T_pruned_convolution2d_nhwc_x8v(
     case xnn_microkernel_type_input_T_pruned_igemm:
       xnn_log_debug("using setup_input_T_pruned_igemm_x8v, stride = %"PRIu8", output_width =  %"PRIu8"", convolution_op->stride_height, output_width);
       return setup_input_T_pruned_igemm_x8v(convolution_op, workspace, log2_input_element_size);
-      else
-        XNN_UNREACHABLE;
     default:
       XNN_UNREACHABLE;
   }

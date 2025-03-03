@@ -85,6 +85,7 @@ typedef void (*xnn_input_T_pruned_gemm_ukernel_fn)(
     float*  c,
     size_t cm_stride/*batch_size * height * width << 2*/,
     size_t cn_stride/*nr << 2*/,
+    const uint16_t* indice,
     const void* params);
 
 typedef void (*xnn_dqgemm_ukernel_fn)(
