@@ -381,6 +381,7 @@ struct xnn_input_T_pruned_x1v_gemm_config {
     xnn_init_f16_minmax_params_fn f16;
     xnn_init_f32_minmax_params_fn f32;
   } init;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x1v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_1x1v; // stride = 2, dilation = 1
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x1v;
   uint8_t mr;
@@ -400,6 +401,7 @@ struct xnn_input_T_pruned_x2v_gemm_config {
     xnn_init_f16_minmax_params_fn f16;
     xnn_init_f32_minmax_params_fn f32;
   } init;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x2v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_2x2v; // stride = 2, dilation = 1
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x2v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x2v;
@@ -421,6 +423,7 @@ struct xnn_input_T_pruned_x4v_gemm_config {
     xnn_init_f16_minmax_params_fn f16;
     xnn_init_f32_minmax_params_fn f32;
   } init;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x4v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_4x4v; // stride = 2, dilation = 1
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x4v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x4v;
@@ -444,6 +447,7 @@ struct xnn_input_T_pruned_x8v_gemm_config {
     xnn_init_f16_minmax_params_fn f16;
     xnn_init_f32_minmax_params_fn f32;
   } init;
+  xnn_x32_packa_gemm_ukernel_fn packa_gemm_x8v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_8x8v; // stride = 2, dilation = 1
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x8v;
   xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x8v;

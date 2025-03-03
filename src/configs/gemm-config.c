@@ -44,9 +44,17 @@ static struct xnn_gemm_config qp8_f32_qc4w_gemm_config = {0};
 static struct xnn_gemm_config qs8_qc8w_gemm_config = {0};
 static struct xnn_gemm_config qu8_gemm_config = {0};
 static struct xnn_input_T_gemm_config f32_input_T_gemm_config = {0};
+static struct xnn_input_T_pruned_x1v_gemm_config f32_input_T_pruned_x1v_gemm_config = {0};
+static struct xnn_input_T_pruned_x2v_gemm_config f32_input_T_pruned_x2v_gemm_config = {0};
+static struct xnn_input_T_pruned_x4v_gemm_config f32_input_T_pruned_x4v_gemm_config = {0};
+static struct xnn_input_T_pruned_x8v_gemm_config f32_input_T_pruned_x8v_gemm_config = {0};
 XNN_INIT_ONCE_GUARD(f16_gemm);
 XNN_INIT_ONCE_GUARD(f32_gemm);
 XNN_INIT_ONCE_GUARD(f32_input_T_gemm);
+XNN_INIT_ONCE_GUARD(f32_input_T_pruned_x1v_gemm);
+XNN_INIT_ONCE_GUARD(f32_input_T_pruned_x2v_gemm);
+XNN_INIT_ONCE_GUARD(f32_input_T_pruned_x4v_gemm);
+XNN_INIT_ONCE_GUARD(f32_input_T_pruned_x8v_gemm);
 XNN_INIT_ONCE_GUARD(f32_gemm_nr2);
 XNN_INIT_ONCE_GUARD(f32_qc4w_gemm);
 XNN_INIT_ONCE_GUARD(f32_qc8w_gemm);
@@ -899,6 +907,97 @@ static void init_f32_input_T_gemm_config(void) {
       f32_input_T_gemm_config.mr = 7;
       // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
       f32_input_T_gemm_config.nr = hardware_config->vlenb;
+      return;
+    }
+  #else
+    return;
+  #endif
+}
+
+static void init_f32_input_T_pruned_x1v_gemm_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+    assert(hardware_config != NULL);
+    if (hardware_config->use_riscv_vector) {
+      f32_input_T_pruned_x1v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(7)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_7x1v__rvv);
+      f32_input_T_pruned_x1v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(1)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x1v__rvv);
+      f32_input_T_pruned_x1v_gemm_config.init.f32 = xnn_init_f32_minmax_scalar_params;
+      f32_input_T_pruned_x1v_gemm_config.packa_gemm_x1v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x1v__rvv_u8;
+      f32_input_T_pruned_x1v_gemm_config.packa_gemm_s2_d1_1x1v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v;
+      f32_input_T_pruned_x1v_gemm_config.packa_gemm_s1_d1_1x1v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v;
+      f32_input_T_pruned_x1v_gemm_config.mr = 7;
+      // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
+      f32_input_T_pruned_x1v_gemm_config.nr = (hardware_config->vlenb) >> 2;
+      return;
+    }
+  #else
+    return;
+  #endif
+}
+
+static void init_f32_input_T_pruned_x2v_gemm_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+    assert(hardware_config != NULL);
+    if (hardware_config->use_riscv_vector) {
+      f32_input_T_pruned_x2v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(8)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_8x2v__rvv);
+      f32_input_T_pruned_x2v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(7)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_7x2v__rvv);
+      f32_input_T_pruned_x2v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(1)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x2v__rvv);
+      f32_input_T_pruned_x2v_gemm_config.init.f32 = xnn_init_f32_minmax_scalar_params;
+      f32_input_T_pruned_x2v_gemm_config.packa_gemm_x2v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x2v__rvv_u8;
+      f32_input_T_pruned_x2v_gemm_config.packa_gemm_s2_d1_2x2v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v;
+      f32_input_T_pruned_x2v_gemm_config.packa_gemm_s1_d1_1x2v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v;
+      f32_input_T_pruned_x2v_gemm_config.packa_gemm_s1_d1_2x2v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v;
+      f32_input_T_pruned_x2v_gemm_config.mr = 8;
+      // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
+      f32_input_T_pruned_x2v_gemm_config.nr = (hardware_config->vlenb) >> 1;
+      return;
+    }
+  #else
+    return;
+  #endif
+}
+
+static void init_f32_input_T_pruned_x4v_gemm_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+    assert(hardware_config != NULL);
+    if (hardware_config->use_riscv_vector) {
+      f32_input_T_pruned_x4v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(7)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_7x4v__rvv);
+      f32_input_T_pruned_x4v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(1)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x4v__rvv);
+      f32_input_T_pruned_x4v_gemm_config.init.f32 = xnn_init_f32_minmax_scalar_params;
+      f32_input_T_pruned_x4v_gemm_config.packa_gemm_x4v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x4v__rvv_u8;
+      f32_input_T_pruned_x4v_gemm_config.packa_gemm_s2_d1_4x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s2_d1;
+      f32_input_T_pruned_x4v_gemm_config.packa_gemm_s1_d1_1x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v;
+      f32_input_T_pruned_x4v_gemm_config.packa_gemm_s1_d1_2x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v;
+      f32_input_T_pruned_x4v_gemm_config.packa_gemm_s1_d1_4x4v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v;
+      f32_input_T_pruned_x4v_gemm_config.mr = 7;
+      // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
+      f32_input_T_pruned_x4v_gemm_config.nr = hardware_config->vlenb;
+      return;
+    }
+  #else
+    return;
+  #endif
+}
+
+static void init_f32_input_T_pruned_x8v_gemm_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+    assert(hardware_config != NULL);
+    if (hardware_config->use_riscv_vector) {
+      f32_input_T_pruned_x8v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(3)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_3x8v__rvv);
+      f32_input_T_pruned_x8v_gemm_config.minmax.input_T_pruned_gemm[XNN_MR_TO_INDEX(1)] = xnn_init_hmp_input_T_pruned_gemm_ukernel((xnn_input_T_pruned_gemm_ukernel_fn) xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x8v__rvv);
+      f32_input_T_pruned_x8v_gemm_config.init.f32 = xnn_init_f32_minmax_scalar_params;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_x8v = (xnn_x32_packa_gemm_ukernel_fn) xnn_x32_packa_gemm_ukernel_x8v__rvv_u8;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_s2_d1_8x8v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_s1_d1_1x8v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_s1_d1_2x8v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_s1_d1_4x8v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v;
+      f32_input_T_pruned_x8v_gemm_config.packa_gemm_s1_d1_8x8v = (xnn_x32_packa_with_im2col_gemm_ukernel_fn) xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v;
+      f32_input_T_pruned_x8v_gemm_config.mr = 3;
+      // nr is set to vlen * 4 / sizeof(float) = 4 * VLENB * 8 / 32 = VLENB
+      f32_input_T_pruned_x8v_gemm_config.nr = (hardware_config->vlenb) << 1;
       return;
     }
   #else
@@ -3885,6 +3984,42 @@ struct xnn_input_T_gemm_config* xnn_init_f32_input_T_gemm_config() {
   }
   XNN_INIT_ONCE(f32_input_T_gemm);
   return &f32_input_T_gemm_config;
+}
+
+struct xnn_input_T_pruned_x1v_gemm_config* xnn_init_f32_input_T_x1v_gemm_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_pruned_x1v_gemm);
+  return &f32_input_T_pruned_x1v_gemm_config;
+}
+
+struct xnn_input_T_pruned_x2v_gemm_config* xnn_init_f32_input_T_x2v_gemm_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_pruned_x2v_gemm);
+  return &f32_input_T_pruned_x2v_gemm_config;
+}
+
+struct xnn_input_T_pruned_x4v_gemm_config* xnn_init_f32_input_T_x4v_gemm_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_pruned_x4v_gemm);
+  return &f32_input_T_pruned_x4v_gemm_config;
+}
+
+struct xnn_input_T_pruned_x8v_gemm_config* xnn_init_f32_input_T_x8v_gemm_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_pruned_x8v_gemm);
+  return &f32_input_T_pruned_x8v_gemm_config;
 }
 
 struct xnn_gemm_config* xnn_init_f32_gemm_nr2_config() {
