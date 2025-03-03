@@ -116,7 +116,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_7x1v__rvv(
       const float vw4 = *w4++;
       const float vw5 = *w5++;
       const float vw6 = *w6++;
-      vfloat32m4_t vb = __riscv_vle32_v_f32m4(a + indice[idx_indice_arr], vl);
+      vfloat32m1_t vb = __riscv_vle32_v_f32m1(a + indice[idx_indice_arr], vl);
       idx_indice_arr++;
       vacc0 = __riscv_vfmacc_vf_f32m1(vacc0, vw0, vb, vl);
       vacc1 = __riscv_vfmacc_vf_f32m1(vacc1, vw1, vb, vl);

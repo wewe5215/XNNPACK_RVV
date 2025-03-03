@@ -87,7 +87,7 @@ void xnn_${DATATYPE_SPEC}_transpose_a_pruned_gemm${SUFFIX}_ukernel_${MR}x${LMUL}
     do {
       $for M in range(MR):
         const float vw${M} = *w${M}++;
-      vfloat32m4_t vb = __riscv_vle32_v_f32m4(a + indice[idx_indice_arr], vl);
+      vfloat32m${LMUL}_t vb = __riscv_vle32_v_f32m${LMUL}(a + indice[idx_indice_arr], vl);
       idx_indice_arr++;
       $for M in range(MR):
         vacc${M} = __riscv_vfmacc_vf_f32m${LMUL}(vacc${M}, vw${M}, vb, vl);

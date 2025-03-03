@@ -74,7 +74,7 @@ void xnn_f32_transpose_a_pruned_gemm_ukernel_3x8v__rvv(
       const float vw0 = *w0++;
       const float vw1 = *w1++;
       const float vw2 = *w2++;
-      vfloat32m4_t vb = __riscv_vle32_v_f32m4(a + indice[idx_indice_arr], vl);
+      vfloat32m8_t vb = __riscv_vle32_v_f32m8(a + indice[idx_indice_arr], vl);
       idx_indice_arr++;
       vacc0 = __riscv_vfmacc_vf_f32m8(vacc0, vw0, vb, vl);
       vacc1 = __riscv_vfmacc_vf_f32m8(vacc1, vw1, vb, vl);

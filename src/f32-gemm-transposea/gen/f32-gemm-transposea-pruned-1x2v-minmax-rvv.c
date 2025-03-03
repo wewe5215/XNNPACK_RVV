@@ -56,7 +56,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x2v__rvv(
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
-      vfloat32m4_t vb = __riscv_vle32_v_f32m4(a + indice[idx_indice_arr], vl);
+      vfloat32m2_t vb = __riscv_vle32_v_f32m2(a + indice[idx_indice_arr], vl);
       idx_indice_arr++;
       vacc0 = __riscv_vfmacc_vf_f32m2(vacc0, vw0, vb, vl);
       k -= sizeof(float);
