@@ -622,7 +622,7 @@ DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x8v_
       float* c,                                    \
       size_t cm_stride,                            \
       size_t cn_stride,                            \
-      uint16_t* indice,                            \
+      const uint16_t* indice,                            \
       const union xnn_f32_default_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
 
 #define DECLARE_F32_INPUT_T_PRUNED_GEMM_RELU_UKERNEL_FUNCTION(fn_name) \
@@ -637,7 +637,7 @@ DECLARE_F32_INPUT_T_GEMM_UKERNEL_FUNCTION(xnn_f32_transpose_a_gemm_ukernel_7x8v_
       float* c,                                    \
       size_t cm_stride,                            \
       size_t cn_stride,                            \
-      uint16_t* indice,                            \
+      const uint16_t* indice,                            \
       const union xnn_f32_relu_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
 
 #define DECLARE_F32_INPUT_T_PRUNED_GEMM_MINMAX_UKERNEL_FUNCTION(fn_name) \

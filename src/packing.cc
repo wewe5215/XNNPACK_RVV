@@ -91,7 +91,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -206,7 +206,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -453,7 +453,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -568,7 +568,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x2v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -786,7 +786,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x2v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1032,7 +1032,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1(uint32_t batch_size, const size_t inpu
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -1187,7 +1187,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x4v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1406,7 +1406,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x4v(uint32_t batch_size,
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1626,7 +1626,7 @@ XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x4v(uint32_t batch_size,
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -1860,7 +1860,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(uint32_t batch_size, const size_t i
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2059,7 +2059,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v(uint32_t batch_size, const size_t 
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = batch_size * input_height*input_width;
   uint32_t* in_ptr = input;
@@ -2215,7 +2215,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2439,7 +2439,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_2x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2658,7 +2658,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_4x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
@@ -2878,7 +2878,7 @@ void xnn_x32_packa_in_T_gemm_im2col_s1_d1_8x8v(uint32_t batch_size, const size_t
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
   const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
-  const uint32_t* input, uint32_t* output){
+  uint32_t* input, uint32_t* output){
   const size_t output_size = output_height*output_width;
   const size_t input_size = input_height*input_width*batch_size;
   uint32_t* in_ptr = input;
