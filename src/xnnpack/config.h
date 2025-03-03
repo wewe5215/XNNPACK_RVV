@@ -207,6 +207,14 @@ static inline struct xnn_hmp_input_T_gemm_ukernel xnn_init_hmp_input_T_gemm_uker
   return ukernel;
 }
 
+static inline struct xnn_hmp_input_T_pruned_gemm_ukernel xnn_init_hmp_input_T_pruned_gemm_ukernel(xnn_input_T_pruned_gemm_ukernel_fn function) {
+  struct xnn_hmp_input_T_pruned_gemm_ukernel ukernel = {{ function }};
+  for (size_t i = 1; i < XNN_MAX_UARCH_TYPES; i++) {
+    ukernel.function[i] = function;
+  }
+  return ukernel;
+}
+
 static inline bool xnn_is_hmp_gemm_ukernel(struct xnn_hmp_gemm_ukernel ukernel) {
 #if XNN_MAX_UARCH_TYPES == 1
   return false;
@@ -244,6 +252,10 @@ static inline bool xnn_is_hmp_igemm_ukernel(struct xnn_hmp_igemm_ukernel ukernel
 XNN_INTERNAL struct xnn_gemm_config* xnn_init_f16_gemm_config();
 XNN_INTERNAL struct xnn_gemm_config* xnn_init_f32_gemm_config();
 XNN_INTERNAL struct xnn_input_T_gemm_config* xnn_init_f32_input_T_gemm_config();
+XNN_INTERNAL struct xnn_input_T_pruned_x1v_gemm_config* xnn_init_f32_input_T_x1v_gemm_config();
+XNN_INTERNAL struct xnn_input_T_pruned_x2v_gemm_config* xnn_init_f32_input_T_x2v_gemm_config();
+XNN_INTERNAL struct xnn_input_T_pruned_x4v_gemm_config* xnn_init_f32_input_T_x4v_gemm_config();
+XNN_INTERNAL struct xnn_input_T_pruned_x8v_gemm_config* xnn_init_f32_input_T_x8v_gemm_config();
 XNN_INTERNAL struct xnn_gemm_config* xnn_init_f32_gemm_nr2_config();
 XNN_INTERNAL struct xnn_gemm_config* xnn_init_f32_qc8w_gemm_config();
 XNN_INTERNAL struct xnn_gemm_config* xnn_init_f32_qc4w_gemm_config();

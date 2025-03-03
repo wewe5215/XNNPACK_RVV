@@ -372,6 +372,94 @@ struct xnn_input_T_gemm_config {
   uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
 };
 
+// lmul = 1
+struct xnn_input_T_pruned_x1v_gemm_config {
+  struct gemm_fused_ukernels minmax;
+  struct gemm_fused_ukernels relu;
+  struct gemm_fused_ukernels linear;
+  union {
+    xnn_init_f16_minmax_params_fn f16;
+    xnn_init_f32_minmax_params_fn f32;
+  } init;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_1x1v; // stride = 2, dilation = 1
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x1v;
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t log2_kr;
+  uint8_t log2_sr;
+  uint8_t planes;  // number of 4 bit planes (1 for legacy, 2 for unzip)
+  uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
+};
+
+// lmul = 2
+struct xnn_input_T_pruned_x2v_gemm_config {
+  struct gemm_fused_ukernels minmax;
+  struct gemm_fused_ukernels relu;
+  struct gemm_fused_ukernels linear;
+  union {
+    xnn_init_f16_minmax_params_fn f16;
+    xnn_init_f32_minmax_params_fn f32;
+  } init;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_2x2v; // stride = 2, dilation = 1
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x2v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x2v;
+
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t log2_kr;
+  uint8_t log2_sr;
+  uint8_t planes;  // number of 4 bit planes (1 for legacy, 2 for unzip)
+  uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
+};
+
+// lmul = 4
+struct xnn_input_T_pruned_x4v_gemm_config {
+  struct gemm_fused_ukernels minmax;
+  struct gemm_fused_ukernels relu;
+  struct gemm_fused_ukernels linear;
+  union {
+    xnn_init_f16_minmax_params_fn f16;
+    xnn_init_f32_minmax_params_fn f32;
+  } init;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_4x4v; // stride = 2, dilation = 1
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x4v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x4v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_4x4v;
+
+
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t log2_kr;
+  uint8_t log2_sr;
+  uint8_t planes;  // number of 4 bit planes (1 for legacy, 2 for unzip)
+  uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
+};
+
+// lmul = 8
+struct xnn_input_T_pruned_x8v_gemm_config {
+  struct gemm_fused_ukernels minmax;
+  struct gemm_fused_ukernels relu;
+  struct gemm_fused_ukernels linear;
+  union {
+    xnn_init_f16_minmax_params_fn f16;
+    xnn_init_f32_minmax_params_fn f32;
+  } init;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s2_d1_8x8v; // stride = 2, dilation = 1
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_1x8v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_2x8v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_4x8v;
+  xnn_x32_packa_with_im2col_gemm_ukernel_fn packa_gemm_s1_d1_8x8v;
+
+
+
+  uint8_t mr;
+  uint8_t nr;
+  uint8_t log2_kr;
+  uint8_t log2_sr;
+  uint8_t planes;  // number of 4 bit planes (1 for legacy, 2 for unzip)
+  uint8_t mr_packed;  // `mr` value used for packed left-hand operands.
+};
+
 struct xnn_maxpool_config {
   xnn_maxpool_ukernel_fn ukernel;
   union {

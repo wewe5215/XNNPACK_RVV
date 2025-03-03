@@ -65,6 +65,12 @@ XNN_INTERNAL uint32_t xnn_get_heuristic_mr_input_T_gemm(
   uint32_t nr,
   struct xnn_hmp_input_T_gemm_ukernel *gemm_cases);
 
+XNN_INTERNAL uint32_t xnn_get_heuristic_mr_input_T_pruned_gemm(
+  size_t batch_size,
+  uint32_t max_mr,
+  uint32_t nr,
+  struct xnn_hmp_input_T_pruned_gemm_ukernel *gemm_cases);
+
 XNN_INTERNAL uint32_t xnn_get_heuristic_mr_igemm(
   size_t batch_size,
   uint32_t max_mr,
