@@ -23,6 +23,7 @@ enum xnn_microkernel_type {
   xnn_microkernel_type_dwconv,
   xnn_microkernel_type_gemm,
   xnn_microkernel_type_input_T_gemm,
+  xnn_microkernel_type_input_T_pruned_gemm,
   xnn_microkernel_type_global_average_pooling,
   xnn_microkernel_type_igemm,
   xnn_microkernel_type_input_T_igemm,
