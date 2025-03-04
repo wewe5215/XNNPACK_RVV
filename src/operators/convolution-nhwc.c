@@ -3603,7 +3603,7 @@ static enum xnn_status reshape_input_T_pruned_gemm(
 
   const size_t groups = convolution_op->groups;
   const size_t group_input_channels = convolution_op->group_input_channels;
-  const size_t pruned_group_input_channels = group_input_channels * (1 - pruning_ratio);
+  const size_t pruned_group_input_channels = (size_t)(group_input_channels * (1.0f - pruning_ratio));
   const size_t w_stride = (pruned_group_input_channels << log2_filter_element_size);
   const size_t group_output_channels = convolution_op->group_output_channels;
 
@@ -3986,13 +3986,13 @@ static enum xnn_status reshape_input_T_igemm(
   const uint32_t nr = convolution_op->ukernel.input_T_gemm.nr;
   struct xnn_hmp_input_T_gemm_ukernel *gemm_cases = convolution_op->ukernel.input_T_gemm.gemm_cases;
 
-  #if XNN_ENABLE_GEMM_M_SPECIALIZATION
-    mr = xnn_get_heuristic_mr_input_T_gemm(output_size, mr, nr, gemm_cases);
-  #else
-    if (output_size == 1 && gemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
-      mr = 1;
-    }
-  #endif
+  // #if XNN_ENABLE_GEMM_M_SPECIALIZATION
+  //   mr = xnn_get_heuristic_mr_input_T_gemm(output_size, mr, nr, gemm_cases);
+  // #else
+  //   if (output_size == 1 && gemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
+  //     mr = 1;
+  //   }
+  // #endif
 
   *workspace_size = 0;
   *workspace_alignment = 1;
@@ -4073,19 +4073,19 @@ static enum xnn_status reshape_input_T_pruned_igemm(
   const uint32_t nr = convolution_op->ukernel.input_T_pruned_gemm.nr;
   struct xnn_hmp_input_T_pruned_gemm_ukernel *gemm_cases = convolution_op->ukernel.input_T_pruned_gemm.gemm_cases;
 
-  #if XNN_ENABLE_GEMM_M_SPECIALIZATION
-    mr = xnn_get_heuristic_mr_input_T_pruned_gemm(output_size, mr, nr, gemm_cases);
-  #else
-    if (output_size == 1 && gemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
-      mr = 1;
-    }
-  #endif
-
+  // #if XNN_ENABLE_GEMM_M_SPECIALIZATION
+  //   mr = xnn_get_heuristic_mr_input_T_pruned_gemm(output_size, mr, nr, gemm_cases);
+  // #else
+  //   if (output_size == 1 && gemm_cases[0].function[XNN_UARCH_DEFAULT] != NULL) {
+  //     mr = 1;
+  //   }
+  // #endif
+  xnn_log_debug("using mr = : %d", mr);
   *workspace_size = 0;
   *workspace_alignment = 1;
   struct xnn_hmp_input_T_pruned_gemm_ukernel gemm_ukernel = gemm_cases[mr - 1];
   const size_t group_input_channels = convolution_op->group_input_channels;
-  const size_t pruned_im2col_col_cnt = group_input_channels * kernel_size * (1 - pruning_ratio);
+  const size_t pruned_im2col_col_cnt = group_input_channels * kernel_size * (1.0f - pruning_ratio);
   const size_t w_stride = pruned_im2col_col_cnt << log2_filter_element_size;
   const size_t group_output_channels = convolution_op->group_output_channels;
   convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm = (struct input_T_pruned_gemm_context){
@@ -4604,12 +4604,12 @@ static enum xnn_status reshape_input_T_pruned_convolution2d_nhwc(
 
   const size_t num_threads = pthreadpool_get_threads_count(threadpool);
   switch (convolution_op->ukernel.type) {
-    case xnn_microkernel_type_input_T_gemm:
+    case xnn_microkernel_type_input_T_pruned_gemm:
       return reshape_input_T_pruned_gemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size,
           workspace_size, workspace_alignment, num_threads, pruning_ratio);
-    case xnn_microkernel_type_input_T_igemm:
+    case xnn_microkernel_type_input_T_pruned_igemm:
       return reshape_input_T_pruned_igemm(
           convolution_op,
           log2_input_element_size, log2_filter_element_size, extra_weights_elements_size, log2_output_element_size,
