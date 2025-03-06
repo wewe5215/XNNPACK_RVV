@@ -87,6 +87,380 @@ void xnn_pack_f32_gemm_goi_w(
 
 #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
 #include <riscv_vector.h>
+void xnn_x32_pack_transpose_ukernel_x4v__rvv_u8(
+  size_t g,
+  size_t nc,
+  size_t kc,
+  size_t nr,
+  size_t kr,
+  size_t sr,
+  uint32_t* weights,
+  const void* scale,
+  uint32_t* packed_weights,
+  size_t extra_bytes,
+  const void* params)
+{
+  assert(g != 0);
+  assert(nc != 0);
+  assert(kc != 0);
+  assert(nr == __riscv_vsetvlmax_e32m4());
+  assert(kr == 1);
+  assert(sr == 1);
+  assert(weights != NULL);
+  assert(packed_weights != NULL);
+
+  uint32_t* out = packed_weights;
+  size_t kc_bstride = kc * 4;
+
+  do {
+    const uint32_t* w0 = weights;
+    size_t n = nc;
+    // NC main loop: process multiple of NR
+    for (;n >= nr; n -= nr) {
+      size_t vlmax = __riscv_vsetvlmax_e32m4();
+
+      uint32_t* out0 = out;
+      size_t k = kc;
+      // vlsseg8, LMUL must <= 1
+      vlmax = __riscv_vsetvlmax_e32m1();
+      // Pack 8 x nr weights
+      for (; k >= 8; k -= 8) {
+        uint32_t* out1 = out0 + nr;
+        uint32_t* out2 = out1 + nr;
+        uint32_t* out3 = out2 + nr;
+        uint32_t* out4 = out3 + nr;
+        uint32_t* out5 = out4 + nr;
+        uint32_t* out6 = out5 + nr;
+        uint32_t* out7 = out6 + nr;
+        // When vlsseg8, LMUL is contraint to 1. We need to use multiple of load & store.
+        const uint32_t* w_ptr = w0;
+        size_t remaining_n = nr;
+        do {
+          vuint32m1x8_t v_w_m1x8 = __riscv_vlsseg8e32_v_u32m1x8(w_ptr, kc_bstride, vlmax);
+          w_ptr += kc * vlmax;
+          vuint32m1_t v_w0 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 0);
+          __riscv_vse32_v_u32m1(out0, v_w0, vlmax); out0 += vlmax;
+          vuint32m1_t v_w1 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 1);
+          __riscv_vse32_v_u32m1(out1, v_w1, vlmax); out1 += vlmax;
+          vuint32m1_t v_w2 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 2);
+          __riscv_vse32_v_u32m1(out2, v_w2, vlmax); out2 += vlmax;
+          vuint32m1_t v_w3 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 3);
+          __riscv_vse32_v_u32m1(out3, v_w3, vlmax); out3 += vlmax;
+          vuint32m1_t v_w4 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 4);
+          __riscv_vse32_v_u32m1(out4, v_w4, vlmax); out4 += vlmax;
+          vuint32m1_t v_w5 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 5);
+          __riscv_vse32_v_u32m1(out5, v_w5, vlmax); out5 += vlmax;
+          vuint32m1_t v_w6 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 6);
+          __riscv_vse32_v_u32m1(out6, v_w6, vlmax); out6 += vlmax;
+          vuint32m1_t v_w7 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 7);
+          __riscv_vse32_v_u32m1(out7, v_w7, vlmax); out7 += vlmax;
+          remaining_n -= vlmax;
+        } while(remaining_n > 0);
+        out0 = out7;
+        w0 += 8;
+      }
+      // vlsseg4, LMUL must <= 2
+      vlmax = __riscv_vsetvlmax_e32m2();
+      // Pack 4 x nr weights
+      for (; k >= 4; k -= 4) {
+        uint32_t* out1 = out0 + nr;
+        uint32_t* out2 = out1 + nr;
+        uint32_t* out3 = out2 + nr;
+        // When vlsseg4, LMUL is contraint to 2. We need to use multiple of load & store.
+        const uint32_t* w_ptr = w0;
+        size_t remaining_n = nr;
+        do {
+          vuint32m2x4_t v_w_m2x4 = __riscv_vlsseg4e32_v_u32m2x4(w_ptr, kc_bstride, vlmax);
+          w_ptr += kc * vlmax;
+          vuint32m2_t v_w0 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 0);
+          __riscv_vse32_v_u32m2(out0, v_w0, vlmax); out0 += vlmax;
+          vuint32m2_t v_w1 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 1);
+          __riscv_vse32_v_u32m2(out1, v_w1, vlmax); out1 += vlmax;
+          vuint32m2_t v_w2 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 2);
+          __riscv_vse32_v_u32m2(out2, v_w2, vlmax); out2 += vlmax;
+          vuint32m2_t v_w3 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 3);
+          __riscv_vse32_v_u32m2(out3, v_w3, vlmax); out3 += vlmax;
+          remaining_n -= vlmax;
+        } while(remaining_n > 0);
+        out0 = out3;
+        w0 += 4;
+      }
+      vlmax = __riscv_vsetvlmax_e32m4();
+      // Pack nr weights
+      for (; k >= 1; k -= 1) {
+        vuint32m4_t v_w = __riscv_vlse32_v_u32m4(w0, kc_bstride, vlmax);
+        __riscv_vse32_v_u32m4(out0, v_w, vlmax);
+        out0 += vlmax;
+        w0 += 1;
+      }
+      out = (uint32_t*) ((uintptr_t) out0 + extra_bytes);
+      w0 += (nr - 1) * kc;
+    }
+    // NC remainder: process n < NR
+    if (n > 0) {
+      size_t vl = __riscv_vsetvl_e32m4(n);
+
+      size_t vlmax;
+      uint32_t* out0 = out;
+      size_t k = kc;
+      // vlsseg8, LMUL must <= 1
+      vlmax = __riscv_vsetvlmax_e32m1();
+      // Pack 8 x n weights
+      for (; k >= 8; k -= 8) {
+        uint32_t* out1 = out0 + nr;
+        uint32_t* out2 = out1 + nr;
+        uint32_t* out3 = out2 + nr;
+        uint32_t* out4 = out3 + nr;
+        uint32_t* out5 = out4 + nr;
+        uint32_t* out6 = out5 + nr;
+        uint32_t* out7 = out6 + nr;
+        // When vlsseg8, LMUL is contraint to 1. We need to use multiple of load & store.
+        const uint32_t* w_ptr = w0;
+        unsigned char remaining_blocks = 4;
+        size_t remaining_n = n;
+        do {
+          size_t vl;
+          if XNN_LIKELY(remaining_n >= vlmax) {
+            vl = vlmax;
+          } else {
+            vl = __riscv_vsetvl_e32m1(remaining_n);
+          }
+          vuint32m1x8_t v_w_m1x8 = __riscv_vlsseg8e32_v_u32m1x8(w_ptr, kc_bstride, vl);
+          w_ptr += kc * vl;
+          vuint32m1_t v_w0 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 0);
+          __riscv_vse32_v_u32m1(out0, v_w0, vl); out0 += vlmax;
+          vuint32m1_t v_w1 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 1);
+          __riscv_vse32_v_u32m1(out1, v_w1, vl); out1 += vlmax;
+          vuint32m1_t v_w2 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 2);
+          __riscv_vse32_v_u32m1(out2, v_w2, vl); out2 += vlmax;
+          vuint32m1_t v_w3 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 3);
+          __riscv_vse32_v_u32m1(out3, v_w3, vl); out3 += vlmax;
+          vuint32m1_t v_w4 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 4);
+          __riscv_vse32_v_u32m1(out4, v_w4, vl); out4 += vlmax;
+          vuint32m1_t v_w5 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 5);
+          __riscv_vse32_v_u32m1(out5, v_w5, vl); out5 += vlmax;
+          vuint32m1_t v_w6 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 6);
+          __riscv_vse32_v_u32m1(out6, v_w6, vl); out6 += vlmax;
+          vuint32m1_t v_w7 = __riscv_vget_v_u32m1x8_u32m1(v_w_m1x8, 7);
+          __riscv_vse32_v_u32m1(out7, v_w7, vl); out7 += vlmax;
+          remaining_n -= vl;
+          remaining_blocks--;
+        } while(remaining_n > 0);
+        out0 = out7 + remaining_blocks * vlmax;
+        w0 += 8;
+      }
+      // vlsseg4, LMUL must <= 2
+      vlmax = __riscv_vsetvlmax_e32m2();
+      // Pack 4 x n weights
+      for (; k >= 4; k -= 4) {
+        uint32_t* out1 = out0 + nr;
+        uint32_t* out2 = out1 + nr;
+        uint32_t* out3 = out2 + nr;
+        // When vlsseg4, LMUL is contraint to 2. We need to use multiple of load & store.
+        const uint32_t* w_ptr = w0;
+        unsigned char remaining_blocks = 2;
+        size_t remaining_n = n;
+        do {
+          size_t vl;
+          if XNN_LIKELY(remaining_n >= vlmax) {
+            vl = vlmax;
+          } else {
+            vl = __riscv_vsetvl_e32m2(remaining_n);
+          }
+          vuint32m2x4_t v_w_m2x4 = __riscv_vlsseg4e32_v_u32m2x4(w_ptr, kc_bstride, vl);
+          w_ptr += kc * vl;
+          vuint32m2_t v_w0 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 0);
+          __riscv_vse32_v_u32m2(out0, v_w0, vl); 
+          out0 += vlmax;
+          vuint32m2_t v_w1 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 1);
+          __riscv_vse32_v_u32m2(out1, v_w1, vl); 
+          out1 += vlmax;
+          vuint32m2_t v_w2 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 2);
+          __riscv_vse32_v_u32m2(out2, v_w2, vl); 
+          out2 += vlmax;
+          vuint32m2_t v_w3 = __riscv_vget_v_u32m2x4_u32m2(v_w_m2x4, 3);
+          __riscv_vse32_v_u32m2(out3, v_w3, vl); 
+          out3 += vlmax;
+          remaining_n -= vl;
+          remaining_blocks--;
+        } while(remaining_n > 0);
+        out0 = out3 + remaining_blocks * vlmax;
+        w0 += 4;
+      }
+      vlmax = __riscv_vsetvlmax_e32m4();
+      vl = __riscv_vsetvl_e32m4(n);
+      // Pack n weights
+      for (; k >= 1; k -= 1) {
+        vuint32m4_t v_w = __riscv_vlse32_v_u32m4(w0, kc_bstride, vl);
+        __riscv_vse32_v_u32m4(out0, v_w, vl);
+        out0 += vlmax;
+        w0 += 1;
+      }
+      out = (uint32_t*) ((uintptr_t) out0 + extra_bytes);
+      w0 += (nr - 1) * kc; 
+    }
+    weights += nc * kc;
+  } while (--g != 0);
+}
+
+void xnn_x32_packa_in_T_im2col_pooling_s2_d1_x2v(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
+  const int output_height, const int output_width,
+  const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
+  const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
+  uint32_t* input, uint32_t* output){
+  const size_t output_size = output_height*output_width;
+  uint32_t* in_ptr = input;
+  uint32_t* in_ptr_rem = input;
+  uint32_t* out_ptr = output;
+  const int vlmax = __riscv_vsetvlmax_e32m2();
+  int output_cur = 0;
+  int input_cursor = 0;
+  int valid_height = input_padding_top + input_height - 1;
+  int last_stride = kernel_height - 1 + (output_height - 1)*2;
+  int k_h_padding_end = last_stride - valid_height;
+  int remainder = 0;
+  for(size_t in_ch = 0; in_ch < group_input_channels; in_ch++){
+      for(size_t batch = 0; batch < batch_size; batch++){
+          int base = in_ch * batch_size * input_height*input_width + batch * input_height * input_width;
+          int output_padding_top_stride = ((input_padding_top + 1) >> 1) * output_width;
+          int output_padding_down_stride = output_padding_top_stride;
+          while(output_padding_top_stride > 0){
+              int out_h = output_cur / output_width;
+              int out_w = output_cur % output_width;
+              input_cursor = base + (out_w << 1);
+              remainder = -(output_width - out_w < vlmax) & (vlmax - output_width + out_w);
+              int padded_k_h = zero_max(input_padding_top - (out_h << 1) - (-(remainder > 0) & ((out_h + 1) << 1)));
+              in_ptr = input + input_cursor;
+              in_ptr_rem = input + base + ((output_cur + remainder) / output_width) * input_width;
+              vuint32m2_t init = __riscv_vmv_v_x_u32m2 (0xff, vlmax);
+              for(int i = 0; i < vlmax * kernel_width * padded_k_h; i += vlmax){
+                  __riscv_vse32_v_u32m2(out_ptr, init, vlmax); out_ptr += vlmax;
+              }
+              for(int k_h = padded_k_h; k_h < kernel_height; k_h++){
+                  int padded = -(remainder > 0 && k_h < input_padding_top - (out_h << 1));
+                  for(int k_w = 0; k_w < kernel_width; k_w++){
+                      int width_padding_start = -(out_w == 0) & ((zero_max(input_padding_left-k_w) + 1) >> 1);
+                      int width_padding_end = -((output_cur + vlmax) / output_width != out_h) & ((zero_max(k_w + ((output_width-1) << 1) - (input_padding_left + input_width-1)) + 1) >> 1);
+                      int input_offset_with_pad = stride_width * width_padding_start - (input_padding_left - k_w);
+                      int input_offset_with_pad_cond = -(k_w < input_padding_left);
+                      int input_cur_offset = (input_offset_with_pad_cond & input_offset_with_pad) + \
+                                              (~input_offset_with_pad_cond & (k_w - input_padding_left));
+                      // for remainder
+                      int width_padding_start_rem = -(remainder > 0) & ((zero_max(input_padding_left-k_w) + 1) >> 1);
+                      input_offset_with_pad = stride_width * width_padding_start_rem - (input_padding_left - k_w);
+                      int input_cur_offset_rem = (input_offset_with_pad_cond & input_offset_with_pad) + \
+                                              (~input_offset_with_pad_cond & (k_w - input_padding_left));
+                      uint32_t* in_ptr_now = in_ptr + input_cur_offset;
+                      uint32_t* in_ptr_remainder = in_ptr_rem + input_cur_offset_rem;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_start;
+                      int vl = vlmax-width_padding_end-width_padding_start-remainder;
+                      vuint32m2_t v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_now, stride_width << 2, ~padded & vl);
+                      __riscv_vse32_v_u32m2(out_ptr, v_w0, ~padded & vl);
+                      out_ptr += vl;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_end;
+                      // for remainder
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_start_rem;
+                      vl = zero_max(remainder - width_padding_start_rem);
+                      v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_remainder, stride_width << 2, vl);
+                      __riscv_vse32_v_u32m2(out_ptr, v_w0, vl);
+                      out_ptr += vl;
+                  }
+                  in_ptr += ~padded & input_width;
+                  in_ptr_rem += -(remainder > 0) & input_width;
+              }
+              output_padding_top_stride -= vlmax;
+              output_cur += vlmax;
+          }
+          input_cursor = base + input_width + (remainder << 1);
+          while(((input_padding_top + 1) >> 1) + input_cursor / input_width + kernel_height - base / input_width <= valid_height){
+              int out_h = output_cur / output_width;
+              int out_w = output_cur % output_width;
+              int input_cursor_rem = base + input_width + ((output_cur + remainder) / output_width) * (input_width << 1);
+              in_ptr = input + input_cursor;
+              in_ptr_rem = input + input_cursor_rem;
+              remainder = -(output_width - out_w < vlmax) & (vlmax - output_width + out_w);
+              for(int k_h = 0; k_h < kernel_height; k_h++){
+                  int padded = -(remainder > 0 && ((input_padding_top + 1) >> 1) + input_cursor_rem / input_width + k_h - base / input_width > valid_height);
+                  for(int k_w = 0; k_w < kernel_width; k_w++){
+                      int width_padding_start = -(out_w == 0) & ((zero_max(input_padding_left-k_w) + 1) >> 1);
+                      int width_padding_end = -((output_cur + vlmax) / output_width != out_h) & ((zero_max(k_w + ((output_width-1) << 1) - (input_padding_left + input_width-1)) + 1) >> 1);
+                      int input_offset_with_pad = stride_width * width_padding_start - (input_padding_left - k_w);
+                      int input_offset_with_pad_cond = -(k_w < input_padding_left);
+                      int input_cur_offset = (input_offset_with_pad_cond & input_offset_with_pad) + \
+                                              (~input_offset_with_pad_cond & (k_w - input_padding_left));
+                      // for remainder
+                      int width_padding_start_rem = -(remainder > 0) & ((zero_max(input_padding_left-k_w) + 1) >> 1);
+                      input_offset_with_pad = stride_width * width_padding_start_rem - (input_padding_left - k_w);
+                      int input_cur_offset_rem = (input_offset_with_pad_cond & input_offset_with_pad) + \
+                                              (~input_offset_with_pad_cond & (k_w - input_padding_left));
+                      uint32_t* in_ptr_now = in_ptr + input_cur_offset;
+                      uint32_t* in_ptr_remainder = in_ptr_rem + input_cur_offset_rem;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_start;
+                      int vl = vlmax-width_padding_end-width_padding_start-remainder;
+                      vuint32m2_t v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_now, stride_width << 2, vl);
+                      __riscv_vse32_v_u32m2(out_ptr, v_w0, vl);
+                      out_ptr += vl;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_end;
+                      // for remainder
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_start_rem;
+                      vl = zero_max(remainder - width_padding_start_rem);
+                      // std::cout << "vl for remainder = " << vl << "\n";
+                      v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_remainder, stride_width << 2, ~padded & vl);
+                      __riscv_vse32_v_u32m2(out_ptr, v_w0, ~padded & vl);
+                      out_ptr += vl;
+                  }
+                  in_ptr += input_width;
+                  in_ptr_rem += input_width;
+              }
+              output_padding_top_stride -= vlmax;
+              output_cur += vlmax;
+              input_cursor = base + input_width + ((input_width << 1) * (output_cur / output_width - ((input_padding_top + 1) >> 1))) + ((output_cur % output_width) << 1);
+          }
+          while(output_cur < output_size){
+              int out_h = output_cur / output_width;
+              int out_w = output_cur % output_width;
+              input_cursor = base + input_width + ((input_width << 1) * (out_h - ((input_padding_top + 1) >> 1))) + (out_w << 1);
+              int input_cursor_rem = base + input_width + ((input_width << 1) * (out_h - 1));
+              in_ptr = input + input_cursor;
+              remainder = -(output_width - out_w < vlmax) & (vlmax - output_width + out_w);
+              for(int k_h = 0; k_h < kernel_height-k_h_padding_end; k_h++){
+                  for(int k_w = 0; k_w < kernel_width; k_w++){
+                      int width_padding_start = -(out_w == 0) & ((zero_max(input_padding_left-k_w) + 1) >> 1);
+                      int width_padding_end = -((output_cur + vlmax) / output_width != out_h) & ((zero_max(k_w + ((output_width-1) << 1) - (input_padding_left + input_width-1)) + 1) >> 1);
+                      int input_offset_with_pad = stride_width * width_padding_start - (input_padding_left - k_w);
+                      int input_offset_with_pad_cond = -(k_w < input_padding_left);
+                      int input_cur_offset = (input_offset_with_pad_cond & input_offset_with_pad) + \
+                                              (~input_offset_with_pad_cond & (k_w - input_padding_left));
+                      uint32_t* in_ptr_now = in_ptr + input_cur_offset;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_start;
+                      int vl = vlmax-width_padding_end-width_padding_start-remainder;
+                      vuint32m2_t v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_now, stride_width << 2, vl);
+                      __riscv_vse32_v_u32m2(out_ptr, v_w0, vl);
+                      out_ptr += vl;
+                      *out_ptr = 0xff;
+                      out_ptr += width_padding_end;
+                  }
+                  in_ptr += output_width << 1;
+              }
+              vuint32m2_t init = __riscv_vmv_v_x_u32m2 (0xff, vlmax);
+              for(int i = 0; i < k_h_padding_end * vlmax * kernel_width; i += vlmax){
+                  __riscv_vse32_v_u32m2(out_ptr, init, vlmax); out_ptr += vlmax;
+              }
+              output_padding_top_stride -= vlmax;
+              output_cur += vlmax;
+          }
+          output_cur = 0;
+      }
+  }
+}
+
 void xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
