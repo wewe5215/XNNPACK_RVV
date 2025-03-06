@@ -30,6 +30,7 @@
 #include "xnnpack/operator.h"
 #include "xnnpack/params.h"
 #include "pthreadpool.h"
+#include "xnnpack/pack.h"
 
 static inline size_t compute_output_dimension_with_tf_same_padding(
     size_t input_dimension,
@@ -393,6 +394,65 @@ enum xnn_status xnn_create_average_pooling2d_nhwc_f32(
     // pavgpool does not include padding (zero) elements when calculating the average.
     pavgpool_config->init.f32(&average_pooling_op->params.f32_minmax, output_min, output_max);
     average_pooling_op->ukernel.type = xnn_microkernel_type_pixelwise_average_pooling;
+  } else {
+    // avgpool includes padding elements when calculating the average.
+    average_pooling_op->ukernel.type = xnn_microkernel_type_average_pooling;
+  }
+
+  *average_pooling_op_out = average_pooling_op;
+  return xnn_status_success;
+
+error:
+  xnn_delete_operator(average_pooling_op);
+  return status;
+}
+
+enum xnn_status xnn_create_input_t_average_pooling2d_nhwc_f32(
+    uint32_t input_padding_top,
+    uint32_t input_padding_right,
+    uint32_t input_padding_bottom,
+    uint32_t input_padding_left,
+    uint32_t pooling_height,
+    uint32_t pooling_width,
+    uint32_t stride_height,
+    uint32_t stride_width,
+    float output_min,
+    float output_max,
+    uint32_t flags,
+    xnn_operator_t* average_pooling_op_out)
+{
+  xnn_operator_t average_pooling_op = NULL;
+  enum xnn_status status = xnn_status_out_of_memory;
+
+  average_pooling_op = xnn_allocate_zero_simd_memory(sizeof(struct xnn_operator));
+  if (average_pooling_op == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator descriptor",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(xnn_operator_type_average_pooling_nhwc_f32));
+    goto error;
+  }
+
+  status = create_average_pooling2d_nhwc(input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
+                                         pooling_height, pooling_width, stride_height, stride_width,
+                                         output_min, output_max, flags,
+                                         xnn_operator_type_average_pooling_nhwc_f32,
+                                         average_pooling_op);
+  if (status != xnn_status_success) {
+    goto error;
+  }
+  const struct xnn_gavgpool_config* gavgpool_config = xnn_init_f32_gavgpool_config();
+  if (gavgpool_config == NULL) {
+    xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                  xnn_operator_type_to_string(xnn_operator_type_average_pooling_nhwc_f32));
+    goto error;
+  }
+  average_pooling_op->gavgpool_config = gavgpool_config;
+  const uint32_t pooling_size = pooling_height * pooling_width;
+  gavgpool_config->init.f32(&average_pooling_op->params.f32_scaleminmax,
+    1.0f / (float) (int32_t) pooling_size, output_min, output_max);
+  const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom);
+  if (any_padding) {
+    xnn_log_error("currently not supported");
   } else {
     // avgpool includes padding elements when calculating the average.
     average_pooling_op->ukernel.type = xnn_microkernel_type_average_pooling;
@@ -795,6 +855,138 @@ static enum xnn_status reshape_average_pooling2d(
   return xnn_status_success;
 }
 
+static enum xnn_status reshape_input_t_average_pooling2d(
+  xnn_operator_t average_pooling_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  uint32_t log2_data_element_size,
+  uint32_t log2_weight_element_size,
+  uint32_t log2_accumulator_element_size,
+  const struct xnn_gavgpool_config gavgpool[restrict XNN_MIN_ELEMENTS(1)],
+  const void* params,
+  size_t params_size,
+  const void* global_params,
+  size_t global_params_size,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool,
+  enum xnn_operator_type operator_type)
+{
+  if (channels == 0) {
+    xnn_log_error(
+      "failed to create %s operator with %zu channels: number of channels must be non-zero",
+      xnn_operator_type_to_string(operator_type), channels);
+    return xnn_status_invalid_parameter;
+  }
+  if (input_pixel_stride < channels) {
+    xnn_log_error(
+      "failed to create %s operator with input pixel stride of %zu: "
+      "stride must be at least as large as the number of channels (%zu)",
+      xnn_operator_type_to_string(operator_type), input_pixel_stride, channels);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (output_pixel_stride < channels) {
+    xnn_log_error(
+      "failed to create %s operator with output pixel stride of %zu: "
+      "stride must be at least as large as the number of channels (%zu)",
+      xnn_operator_type_to_string(operator_type), output_pixel_stride, channels);
+    return xnn_status_invalid_parameter;
+  }
+
+  average_pooling_op->channels = channels;
+  average_pooling_op->input_pixel_stride = input_pixel_stride;
+  average_pooling_op->output_pixel_stride = output_pixel_stride;
+  average_pooling_op->state = xnn_run_state_invalid;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error("failed to reshape %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(average_pooling_op->type));
+    return xnn_status_uninitialized;
+  }
+
+  if (input_width == 0 || input_height == 0) {
+    xnn_log_error(
+      "failed to reshape %s operator with %zux%zu input: input dimensions must be non-zero",
+      xnn_operator_type_to_string(average_pooling_op->type), input_width, input_height);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (batch_size == 0) {
+    average_pooling_op->state = xnn_run_state_skip;
+    return xnn_status_success;
+  }
+
+  average_pooling_op->input_height = input_height;
+  average_pooling_op->input_width = input_width;
+
+    average_pooling_op->output_height = xnn_compute_convolution_output_dimension(
+        average_pooling_op->padding_top + input_height + average_pooling_op->padding_bottom,
+        average_pooling_op->kernel_height,
+        1,
+        average_pooling_op->stride_height);
+    average_pooling_op->output_width = xnn_compute_convolution_output_dimension(
+        average_pooling_op->padding_left + input_width + average_pooling_op->padding_right,
+        average_pooling_op->kernel_width,
+        1,
+        average_pooling_op->stride_width);
+
+  if (output_height_out != NULL) {
+    *output_height_out = average_pooling_op->output_height;
+  }
+  if (output_width_out != NULL) {
+    *output_width_out = average_pooling_op->output_width;
+  }
+
+  const size_t output_height = average_pooling_op->output_height;
+  const size_t output_width = average_pooling_op->output_width;
+  const size_t padded_input_width = average_pooling_op->padding_left + input_width + average_pooling_op->padding_right;
+  const size_t padded_input_height = average_pooling_op->padding_top + input_height + average_pooling_op->padding_bottom;
+  const size_t num_threads = pthreadpool_get_threads_count(threadpool);
+  // Global average pooling
+  const size_t input_elements = input_height * input_width;
+  const size_t input_stride_in_bytes = average_pooling_op->input_pixel_stride << log2_data_element_size;
+  average_pooling_op->context.global_average_pooling_nwc = (struct global_average_pooling_nwc_context) {
+      .pooling_size = average_pooling_op->kernel_height * average_pooling_op->kernel_width,
+      .log2_element_size = log2_data_element_size,
+      .nr = gavgpool->nr
+  };
+  memcpy(&average_pooling_op->context.global_average_pooling_nwc.params, global_params, global_params_size);
+  average_pooling_op->ukernel.subtype = xnn_microkernel_type_global_average_pooling;
+  average_pooling_op->compute[0].range[0] = batch_size;
+
+  if (input_elements <= gavgpool->row_tile) {
+    *workspace_size = 0;
+    *workspace_alignment = 1;
+  } else {
+    const size_t multipass_batch_stride = round_up_po2(
+      (channels + (XNN_MULTIPASS_EXTRA_BYTES >> log2_data_element_size)) << log2_accumulator_element_size,
+      XNN_ALLOCATION_ALIGNMENT);
+    const bool use_threads_workspace_size = num_threads < batch_size;
+    if (use_threads_workspace_size) {
+      *workspace_size = num_threads * multipass_batch_stride;
+      *workspace_alignment = XNN_ALLOCATION_ALIGNMENT;
+    } else {
+      *workspace_size = batch_size * multipass_batch_stride;
+      *workspace_alignment = XNN_ALLOCATION_ALIGNMENT;
+    }
+  }
+  const size_t total_output = batch_size * output_height * output_width * channels;
+  average_pooling_op->compute[0].type = xnn_parallelization_type_1d_tile_1d;
+  average_pooling_op->compute[0].task_1d_tile_1d = (pthreadpool_task_1d_tile_1d_t) xnn_compute_input_t_global_average_pooling;
+  average_pooling_op->compute[0].range[0] = total_output;
+  average_pooling_op->compute[0].tile[0] = round_up(total_output, gavgpool->nr * num_threads);
+  average_pooling_op->state = xnn_run_state_needs_setup;
+
+  return xnn_status_success;
+}
+
 enum xnn_status xnn_reshape_average_pooling2d_nhwc_qu8(
   xnn_operator_t average_pooling_op,
   size_t batch_size,
@@ -950,6 +1142,47 @@ enum xnn_status xnn_reshape_average_pooling2d_nhwc_f32(
     is_pixelwise);
 }
 
+enum xnn_status xnn_reshape_input_t_average_pooling2d_nhwc_f32(
+  xnn_operator_t average_pooling_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool)
+{
+  if (average_pooling_op->type != xnn_operator_type_average_pooling_nhwc_f32) {
+    xnn_log_error("failed to reshape operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(xnn_operator_type_average_pooling_nhwc_f32),
+      xnn_operator_type_to_string(average_pooling_op->type));
+    return xnn_status_invalid_parameter;
+  }
+
+  assert(average_pooling_op->ukernel.type == xnn_microkernel_type_average_pooling);
+
+  const void* pooling_params = &average_pooling_op->params.f32_scaleminmax;
+  size_t pooling_params_size = sizeof(average_pooling_op->params.f32_scaleminmax);
+
+  return reshape_input_t_average_pooling2d(
+      average_pooling_op,
+      batch_size, input_height, input_width, channels, input_pixel_stride, output_pixel_stride,
+      workspace_size, workspace_alignment,
+      /*log2_data_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+      /*log2_weight_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+      /*log2_accumulator_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+      average_pooling_op->gavgpool_config,
+      pooling_params, pooling_params_size,
+      &average_pooling_op->params.f32_scaleminmax, sizeof(average_pooling_op->params.f32_scaleminmax),
+      output_height_out, output_width_out,
+      threadpool,
+      xnn_operator_type_average_pooling_nhwc_f32);
+}
+
 static enum xnn_status setup_average_pooling2d(
   xnn_operator_t average_pooling_op,
   void* workspace,
@@ -1018,6 +1251,64 @@ static enum xnn_status setup_average_pooling2d(
   return xnn_status_success;
 }
 
+static enum xnn_status setup_input_t_average_pooling2d(
+  xnn_operator_t average_pooling_op,
+  void* workspace,
+  const void* input,
+  void* output)
+{
+  switch (average_pooling_op->state) {
+    case xnn_run_state_skip:
+      return xnn_status_success;
+    case xnn_run_state_invalid:
+      xnn_log_error(
+        "failed to setup %s operator: operator has not been reshaped yet",
+        xnn_operator_type_to_string(average_pooling_op->type));
+      return xnn_status_invalid_state;
+    case xnn_run_state_needs_setup:
+      // Operator has been reshaped, but not setup, continue with setup.
+    case xnn_run_state_ready:
+      // Operator has been reshaped, and we are setting up with different pointers.
+      break;
+  }
+
+  average_pooling_op->output = output;
+  const size_t batch_size = average_pooling_op->batch_size;
+  const size_t input_channel = average_pooling_op->channels;
+  const size_t output_height = average_pooling_op->output_height;
+  const size_t output_width = average_pooling_op->output_width;
+  const size_t kernel_height = average_pooling_op->kernel_height;
+  const size_t kernel_width = average_pooling_op->kernel_width;
+  const size_t kernel_size = kernel_height * kernel_width;
+  const size_t total_output = input_channel * batch_size * output_height * output_width;
+  const size_t aligned_total_input_T_size = round_up_po2(kernel_size * total_output << average_pooling_op->context.max_pooling.log2_element_size , XNN_ALLOCATION_ALIGNMENT);
+  const size_t nr = average_pooling_op->context.global_average_pooling_nwc.nr;
+  void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
+  // Global average pooling
+  xnn_x32_pack_transpose_ukernel_x4v__rvv_u8(
+      /*g=*/1, total_output, kernel_size,
+      nr, 1, 1, 
+      input,
+      /*scale=*/NULL, 
+      input_packed_ptr, 
+      /*extra_bytes=*/0, 
+      /*params=*/NULL
+  );
+  average_pooling_op->context.global_average_pooling_nwc.input = input;
+  average_pooling_op->context.global_average_pooling_nwc.output = output;
+  average_pooling_op->context.global_average_pooling_nwc.im2col_packed = input_packed_ptr;
+  if (average_pooling_op->context.global_average_pooling_nwc.multipass_batch_stride != 0 && workspace == NULL) {
+    xnn_log_error(
+      "failed to setup %s operator: workspace of size %zu required but workspace is NULL",
+      xnn_operator_type_to_string(average_pooling_op->type),
+      average_pooling_op->context.global_average_pooling_nwc.multipass_batch_stride);
+  }
+  average_pooling_op->context.global_average_pooling_nwc.multipass_buffer = workspace;
+  average_pooling_op->state = xnn_run_state_ready;
+
+  return xnn_status_success;
+}
+
 enum xnn_status xnn_setup_average_pooling2d_nhwc_qu8(
     xnn_operator_t average_pooling_op,
     void* workspace,
@@ -1076,6 +1367,27 @@ enum xnn_status xnn_setup_average_pooling2d_nhwc_f32(
 
   assert(average_pooling_op->ukernel.type == xnn_microkernel_type_average_pooling ||
          average_pooling_op->ukernel.type == xnn_microkernel_type_pixelwise_average_pooling);
+
+  return setup_average_pooling2d(
+    average_pooling_op,
+    workspace,
+    input, output);
+}
+
+enum xnn_status xnn_setup_input_t_average_pooling2d_nhwc_f32(
+    xnn_operator_t average_pooling_op,
+    void* workspace,
+    const float* input,
+    float* output)
+{
+  if (average_pooling_op->type != xnn_operator_type_average_pooling_nhwc_f32) {
+    xnn_log_error("failed to setup operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(xnn_operator_type_average_pooling_nhwc_f32),
+      xnn_operator_type_to_string(average_pooling_op->type));
+    return xnn_status_invalid_parameter;
+  }
+
+  assert(average_pooling_op->ukernel.type == xnn_microkernel_type_average_pooling);
 
   return setup_average_pooling2d(
     average_pooling_op,

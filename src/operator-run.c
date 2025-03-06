@@ -1581,6 +1581,19 @@ void xnn_compute_global_average_pooling_nwc_multipass_with_thread(
     &context->params);
 }
 
+void xnn_compute_input_t_global_average_pooling(
+  const struct global_average_pooling_nwc_context context[restrict XNN_MIN_ELEMENTS(1)],
+  size_t mr_block_start,
+  size_t mr_block_size)
+{
+  context->input_t_ukernel(
+    context->pooling_size,
+    mr_block_size,
+    (const void*)((uintptr_t) context->im2col_packed + (mr_block_start * context->pooling_size << context->log2_element_size)),
+    (void*)((uintptr_t) context->output + (mr_block_start << context->log2_element_size)),
+    &context->params);
+}
+
 void xnn_compute_global_average_pooling_ncw(
     const struct global_average_pooling_ncw_context context[restrict XNN_MIN_ELEMENTS(1)],
     size_t batch_index,

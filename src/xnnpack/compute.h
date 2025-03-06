@@ -1255,10 +1255,14 @@ struct pixelwise_average_pooling_context {
 struct global_average_pooling_nwc_context {
   const void* input;
   const void* zero;
+  const void* im2col_packed;
   size_t input_pixel_stride;
   size_t input_batch_stride;
   size_t input_elements;
   size_t channels;
+  size_t pooling_size;
+  size_t log2_element_size;
+  size_t nr;
   void* output;
   size_t output_batch_stride;
   union {
@@ -1289,6 +1293,11 @@ struct global_average_pooling_nwc_context {
       const struct global_average_pooling_nwc_context context[restrict XNN_MIN_ELEMENTS(1)],
       size_t thread_index,
       size_t batch_index);
+
+  XNN_PRIVATE void xnn_compute_input_t_global_average_pooling(
+      const struct global_average_pooling_nwc_context context[restrict XNN_MIN_ELEMENTS(1)],
+      size_t mr_block_start,
+      size_t mr_block_size);
 #endif
 
 struct global_average_pooling_ncw_context {
