@@ -604,6 +604,7 @@ static enum xnn_status reshape_input_t_max_pooling2d_nhwc(
   }
 
   max_pooling_op->channels = channels;
+  max_pooling_op->batch_size = batch_size;
   max_pooling_op->input_pixel_stride = input_pixel_stride;
   max_pooling_op->output_pixel_stride = output_pixel_stride;
 
@@ -813,6 +814,53 @@ static enum xnn_status setup_max_pooling2d_nhwc(
   return xnn_status_success;
 }
 
+static enum xnn_status setup_input_t_max_pooling2d_nhwc(
+  xnn_operator_t max_pooling_op,
+  enum xnn_operator_type expected_operator_type,
+  const void* input,
+  void* output)
+{
+  if (max_pooling_op->type != expected_operator_type) {
+    xnn_log_error("failed to setup operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(expected_operator_type),
+      xnn_operator_type_to_string(max_pooling_op->type));
+    return xnn_status_invalid_parameter;
+  }
+
+  switch (max_pooling_op->state) {
+    case xnn_run_state_skip:
+      return xnn_status_success;
+    case xnn_run_state_invalid:
+      xnn_log_error(
+        "failed to setup %s operator: operator has not been reshaped yet",
+        xnn_operator_type_to_string(max_pooling_op->type));
+      return xnn_status_invalid_state;
+    case xnn_run_state_needs_setup:
+      // Operator has been reshaped, but not setup, continue with setup.
+    case xnn_run_state_ready:
+      // Operator has been reshaped, and we are setting up with different pointers.
+      break;
+  }
+  const size_t batch_size = max_pooling_op->batch_size;
+  const size_t input_channel = max_pooling_op->channels;
+  const size_t output_height = max_pooling_op->output_height;
+  const size_t output_width = max_pooling_op->output_width;
+  const size_t batch_output_size = batch_size * output_height * output_width;
+  const size_t kernel_height = max_pooling_op->kernel_height;
+  const size_t kernel_width = max_pooling_op->kernel_width;
+  const size_t aligned_total_input_T_size = round_up_po2(batch_output_size * input_channel, XNN_ALLOCATION_ALIGNMENT);
+  void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
+  im2col_pooling_s2_d1_with_pack_x2v(batch_size, max_pooling_op->input_height, max_pooling_op->input_width, input_channel, \
+    output_height, output_width, kernel_height, kernel_width, max_pooling_op->stride_height, max_pooling_op->stride_width, \
+    max_pooling_op->dilation_height, max_pooling_op->dilation_width, max_pooling_op->padding_left, max_pooling_op->padding_top, \
+    input, input_packed_ptr);
+  max_pooling_op->context.max_pooling.im2col_packed = input_packed_ptr;
+  max_pooling_op->context.max_pooling.output = output;
+
+  max_pooling_op->state = xnn_run_state_ready;
+
+  return xnn_status_success;
+}
 enum xnn_status xnn_setup_max_pooling2d_nhwc_s8(
     xnn_operator_t max_pooling_op,
     const int8_t* input,
@@ -851,4 +899,14 @@ enum xnn_status xnn_setup_max_pooling2d_nhwc_f32(
   return setup_max_pooling2d_nhwc(
     max_pooling_op, xnn_operator_type_max_pooling_nhwc_f32,
     input, output);
+}
+
+enum xnn_status xnn_setup_input_t_max_pooling2d_nhwc_f32(
+  xnn_operator_t max_pooling_op,
+  const float* input,
+  float* output)
+{
+return setup_input_t_max_pooling2d_nhwc(
+  max_pooling_op, xnn_operator_type_max_pooling_nhwc_f32,
+  input, output);
 }
