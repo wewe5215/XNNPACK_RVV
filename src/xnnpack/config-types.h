@@ -200,6 +200,7 @@ struct xnn_pavgpool_config {
 struct xnn_gavgpool_config {
   xnn_gavgpool_unipass_ukernel_fn unipass;
   xnn_gavgpool_multipass_ukernel_fn multipass;
+  xnn_input_t_gavgpool_ukernel_fn input_t_pass;
   union {
     xnn_init_f16_scaleminmax_params_fn f16;
     xnn_init_f32_scaleminmax_params_fn f32;
@@ -218,6 +219,7 @@ struct xnn_gavgpool_config {
   // Number of channels in a tile.
   // For best efficiency, micro-kernel must process a multiple of this number of channels in each call.
   uint16_t channel_tile;
+  uint32_t nr;
 };
 
 struct xnn_gavgpool_cw_config {

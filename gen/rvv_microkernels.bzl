@@ -9,6 +9,7 @@ PROD_RVV_MICROKERNEL_SRCS = [
     "src/f32-argmaxpool/f32-argmaxpool-4x-rvv-u1v.c",
     "src/f32-argmaxpool/f32-argmaxpool-9p8x-rvv-u1v.c",
     "src/f32-argmaxpool/f32-argmaxpool-9x-rvv-u1v.c",
+    "src/f32-avgpool/f32-avgpool-cnhw-7p7x-minmax-rvv-c4v.c",
     "src/f32-avgpool/gen/f32-avgpool-9p8x-minmax-rvv-c2v.c",
     "src/f32-avgpool/gen/f32-avgpool-9x-minmax-rvv-c2v.c",
     "src/f32-dwconv/gen/f32-dwconv-3p8c-minmax-rvv.c",

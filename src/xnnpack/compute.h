@@ -1270,6 +1270,7 @@ struct global_average_pooling_nwc_context {
   union {
     xnn_gavgpool_unipass_ukernel_fn unipass_ukernel;
     xnn_gavgpool_multipass_ukernel_fn multipass_ukernel;
+    xnn_input_t_gavgpool_ukernel_fn input_t_ukernel;
   };
   size_t multipass_batch_stride;
   void* multipass_buffer;

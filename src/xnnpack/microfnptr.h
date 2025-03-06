@@ -891,6 +891,13 @@ typedef void (*xnn_gavgpool_unipass_ukernel_fn)(
     void* output,
     const void* params);
 
+typedef void (*xnn_input_t_gavgpool_ukernel_fn)(
+    size_t kernel_elements,
+    size_t total_output,
+    const void* input,
+    void* output,
+    const void* params);
+
 typedef void (*xnn_f16_gavgpool_minmax_unipass_ukernel_fn)(
     size_t rows,
     size_t channels,
