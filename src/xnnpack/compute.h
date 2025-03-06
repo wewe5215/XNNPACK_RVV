@@ -1039,6 +1039,7 @@ struct dwconv2d_context {
 
 struct max_pooling_context {
   const void** indirect_input;
+  const void* im2col_packed;
   size_t indirect_input_height_stride;
   size_t input_offset;
   size_t input_batch_stride;
@@ -1050,6 +1051,7 @@ struct max_pooling_context {
   size_t channels;
   size_t input_increment;
   size_t output_increment;
+  size_t log2_element_size;
   union {
     union xnn_u8_minmax_params u8;
     union xnn_s8_minmax_params s8;
@@ -1065,6 +1067,10 @@ struct max_pooling_context {
       const struct max_pooling_context context[restrict XNN_MIN_ELEMENTS(1)],
       size_t batch_index,
       size_t output_y);
+  XNN_PRIVATE void xnn_compute_input_t_max_pooling(
+      const struct max_pooling_context context[restrict XNN_MIN_ELEMENTS(1)],
+      size_t mr_block_start,
+      size_t mr_block_size);
 #endif
 
 struct unpooling_context {

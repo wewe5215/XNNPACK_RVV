@@ -1317,6 +1317,19 @@ void xnn_compute_max_pooling(
     &context->params);
 }
 
+void xnn_compute_input_t_max_pooling(
+  const struct max_pooling_context context[restrict XNN_MIN_ELEMENTS(1)],
+  size_t mr_block_start,
+  size_t mr_block_size)
+{
+  context->input_t_ukernel(
+    context->pooling_size,
+    mr_block_size,
+    (const void*)((uintptr_t) context->im2col_packed + (mr_block_start * context->pooling_size << context->log2_element_size)),
+    (void*)((uintptr_t) context->output + (mr_block_start << context->log2_element_size)),
+    &context->params);
+}
+
 void xnn_compute_unpooling(
     const struct unpooling_context context[restrict XNN_MIN_ELEMENTS(1)],
     size_t input_y,
