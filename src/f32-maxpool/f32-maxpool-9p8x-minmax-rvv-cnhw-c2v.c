@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "xnnpack/maxpool.h"
 #include <riscv_vector.h>
 
 void xnn_f32_maxpool_cnhw_minmax_ukernel_9p8x__rvv_c2v(

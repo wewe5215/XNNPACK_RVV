@@ -4109,7 +4109,7 @@ static enum xnn_status reshape_input_T_pruned_igemm(
   convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm.bias = convolution_op->bias;
   xnn_log_debug("kernel address: %p", convolution_op->kernel);
   xnn_log_debug("bias address: %p", convolution_op->bias);
-  xnn_log_debug("pruned_im2col_col_cnt: %d", pruned_im2col_col_cnt);
+  xnn_log_debug("pruned_im2col_col_cnt: %zu", pruned_im2col_col_cnt);
   size_t nc = group_output_channels;
   if (num_threads > 1) {
     const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
@@ -4993,13 +4993,14 @@ static enum xnn_status setup_input_T_igemm(
     convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
     convolution_op->input, input_packed_ptr
   );*/
+  uint32_t* input = convolution_op->input;
   if(convolution_op->stride_height == 2){
     xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1");
   	xnn_x32_packa_in_T_gemm_im2col_s2_d1(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
     	output_height, output_width,
     	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
     	convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-    	convolution_op->input, input_packed_ptr
+    	input, input_packed_ptr
   	);
   }
   else if(convolution_op->stride_height == 1){
@@ -5009,7 +5010,7 @@ static enum xnn_status setup_input_T_igemm(
         	output_height, output_width,
         	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
         	convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-        	convolution_op->input, input_packed_ptr
+        	input, input_packed_ptr
         	);
   	}	
   	else if(output_width >= (nr / 2 + nr / 4) / 2){
@@ -5018,7 +5019,7 @@ static enum xnn_status setup_input_T_igemm(
                 output_height, output_width,
                 kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
                 convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-                convolution_op->input, input_packed_ptr
+                input, input_packed_ptr
                 );
   	}
   	else{
@@ -5027,7 +5028,7 @@ static enum xnn_status setup_input_T_igemm(
                   output_height, output_width,
                   kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
                   convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-                  convolution_op->input, input_packed_ptr
+                  input, input_packed_ptr
                   );
   	}
   }

@@ -30,7 +30,7 @@
 #include "xnnpack/operator.h"
 #include "xnnpack/params.h"
 #include "pthreadpool.h"
-
+#include "xnnpack/pack.h"
 static inline size_t compute_output_dimension_with_tf_same_padding(
     size_t input_dimension,
     size_t stride_dimension)
@@ -845,12 +845,13 @@ static enum xnn_status setup_input_t_max_pooling2d_nhwc(
   const size_t input_channel = max_pooling_op->channels;
   const size_t output_height = max_pooling_op->output_height;
   const size_t output_width = max_pooling_op->output_width;
-  const size_t batch_output_size = batch_size * output_height * output_width;
   const size_t kernel_height = max_pooling_op->kernel_height;
   const size_t kernel_width = max_pooling_op->kernel_width;
-  const size_t aligned_total_input_T_size = round_up_po2(batch_output_size * input_channel, XNN_ALLOCATION_ALIGNMENT);
+  const size_t kernel_size = kernel_height * kernel_width;
+  const size_t total_output = input_channel * batch_size * output_height * output_width;
+  const size_t aligned_total_input_T_size = round_up_po2(kernel_size * total_output << max_pooling_op->context.max_pooling.log2_element_size , XNN_ALLOCATION_ALIGNMENT);
   void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
-  im2col_pooling_s2_d1_with_pack_x2v(batch_size, max_pooling_op->input_height, max_pooling_op->input_width, input_channel, \
+  xnn_x32_packa_in_T_im2col_pooling_s2_d1_x2v(batch_size, max_pooling_op->input_height, max_pooling_op->input_width, input_channel, \
     output_height, output_width, kernel_height, kernel_width, max_pooling_op->stride_height, max_pooling_op->stride_width, \
     max_pooling_op->dilation_height, max_pooling_op->dilation_width, max_pooling_op->padding_left, max_pooling_op->padding_top, \
     input, input_packed_ptr);

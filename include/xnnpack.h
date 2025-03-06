@@ -5205,7 +5205,24 @@ enum xnn_status xnn_reshape_max_pooling2d_nhwc_f32(
   size_t* output_width_out,
   pthreadpool_t threadpool);
 
+enum xnn_status xnn_reshape_input_t_max_pooling2d_nhwc_f32(
+  xnn_operator_t max_pooling_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool);
+
 enum xnn_status xnn_setup_max_pooling2d_nhwc_f32(
+  xnn_operator_t max_pooling_op,
+  const float* input,
+  float* output);
+
+enum xnn_status xnn_setup_input_t_max_pooling2d_nhwc_f32(
   xnn_operator_t max_pooling_op,
   const float* input,
   float* output);
