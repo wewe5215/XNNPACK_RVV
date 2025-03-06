@@ -1057,6 +1057,7 @@ struct max_pooling_context {
     union xnn_f32_minmax_params f32;
   } params;
   xnn_maxpool_ukernel_fn ukernel;
+  xnn_input_t_maxpool_ukernel_fn input_t_ukernel;
 };
 
 #ifndef __cplusplus

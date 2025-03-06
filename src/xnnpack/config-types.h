@@ -466,6 +466,7 @@ struct xnn_input_T_pruned_x8v_gemm_config {
 
 struct xnn_maxpool_config {
   xnn_maxpool_ukernel_fn ukernel;
+  xnn_input_t_maxpool_ukernel_fn input_t_ukernel;
   union {
     xnn_init_s8_minmax_params_fn s8;
     xnn_init_u8_minmax_params_fn u8;
