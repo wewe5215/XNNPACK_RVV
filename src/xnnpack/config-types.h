@@ -479,6 +479,7 @@ struct xnn_maxpool_config {
   // first_pass_tile_size, remainder passes are not run. We run as many remainder passes as required to cover the entire
   // pooling window.
   uint8_t remainder_pass_tile_size;
+  uint32_t nr;
 };
 
 struct xnn_zip_config {

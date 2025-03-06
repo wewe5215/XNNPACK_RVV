@@ -540,6 +540,123 @@ static enum xnn_status reshape_max_pooling2d_nhwc(
   return xnn_status_success;
 }
 
+static enum xnn_status reshape_input_t_max_pooling2d_nhwc(
+  xnn_operator_t max_pooling_op,
+  enum xnn_operator_type expected_operator_type,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  uint32_t log2_input_element_size,
+  uint32_t log2_output_element_size,
+  const struct xnn_maxpool_config maxpool[restrict XNN_MIN_ELEMENTS(1)],
+  const void* params,
+  size_t params_size,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool)
+{
+  if (max_pooling_op->type != expected_operator_type) {
+    xnn_log_error("failed to reshape operator: operator type mismatch (expected %s, got %s)",
+      xnn_operator_type_to_string(expected_operator_type),
+      xnn_operator_type_to_string(max_pooling_op->type));
+    return xnn_status_invalid_parameter;
+  }
+  max_pooling_op->state = xnn_run_state_invalid;
+
+  if ((xnn_params.init_flags & XNN_INIT_FLAG_XNNPACK) == 0) {
+    xnn_log_error(
+      "failed to reshape %s operator: XNNPACK is not initialized",
+      xnn_operator_type_to_string(max_pooling_op->type));
+    return xnn_status_uninitialized;
+  }
+
+  if (input_width == 0 || input_height == 0) {
+    xnn_log_error(
+      "failed to reshape %s operator with %zux%zu input: input dimensions must be non-zero",
+      xnn_operator_type_to_string(max_pooling_op->type), input_width, input_height);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (channels == 0) {
+    xnn_log_error(
+      "failed to reshape %s operator with %zu channels: number of channels must be non-zero",
+      xnn_operator_type_to_string(expected_operator_type), channels);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (input_pixel_stride < channels) {
+    xnn_log_error(
+      "failed to reshape %s operator with input pixel stride of %zu: "
+      "stride must be at least as large as the number of channels (%zu)",
+      xnn_operator_type_to_string(expected_operator_type), input_pixel_stride, channels);
+    return xnn_status_invalid_parameter;
+  }
+
+  if (output_pixel_stride < channels) {
+    xnn_log_error(
+      "failed to reshape %s operator with output pixel stride of %zu: "
+      "stride must be at least as large as the number of channels (%zu)",
+      xnn_operator_type_to_string(expected_operator_type), output_pixel_stride, channels);
+    return xnn_status_invalid_parameter;
+  }
+
+  max_pooling_op->channels = channels;
+  max_pooling_op->input_pixel_stride = input_pixel_stride;
+  max_pooling_op->output_pixel_stride = output_pixel_stride;
+
+  if (batch_size == 0) {
+    max_pooling_op->state = xnn_run_state_skip;
+    return xnn_status_success;
+  }
+
+  max_pooling_op->input_height = input_height;
+  max_pooling_op->input_width = input_width;
+  max_pooling_op->output_height = xnn_compute_convolution_output_dimension(
+      max_pooling_op->padding_top + input_height + max_pooling_op->padding_bottom,
+      max_pooling_op->kernel_height,
+      max_pooling_op->dilation_height,
+      max_pooling_op->stride_height);
+  max_pooling_op->output_width = xnn_compute_convolution_output_dimension(
+      max_pooling_op->padding_left + input_width + max_pooling_op->padding_right,
+      max_pooling_op->kernel_width,
+      max_pooling_op->dilation_width,
+      max_pooling_op->stride_width);
+
+  if (output_height_out != NULL) {
+    *output_height_out = max_pooling_op->output_height;
+  }
+  if (output_width_out != NULL) {
+    *output_width_out = max_pooling_op->output_width;
+  }
+
+  const size_t pooling_height = max_pooling_op->kernel_height;
+  const size_t pooling_width = max_pooling_op->kernel_width;
+  const size_t pooling_size = pooling_height * pooling_width;
+  const size_t output_height = max_pooling_op->output_height;
+  const size_t output_width = max_pooling_op->output_width;
+
+  max_pooling_op->context.max_pooling = (struct max_pooling_context) {
+    .log2_element_size = log2_input_element_size,
+    .output_width = output_width,
+    .pooling_size = pooling_size,
+    .ukernel = maxpool->ukernel,
+    .input_t_ukernel = maxpool->input_t_ukernel
+  };
+  memcpy(&max_pooling_op->context.max_pooling.params, params, params_size);
+  const size_t num_threads = pthreadpool_get_threads_count(threadpool);
+  const size_t total_output = batch_size * output_height * output_width * channels;
+  max_pooling_op->compute[0].type = xnn_parallelization_type_1d_tile_1d;
+  max_pooling_op->compute[0].task_1d_tile_1d = (pthreadpool_task_1d_tile_1d_t) xnn_compute_input_t_max_pooling;
+  max_pooling_op->compute[0].range[0] = total_output;
+  max_pooling_op->compute[0].tile[0] = round_up(total_output, maxpool->nr * num_threads);
+  max_pooling_op->state = xnn_run_state_needs_setup;
+
+  return xnn_status_success;
+}
+
 enum xnn_status xnn_reshape_max_pooling2d_nhwc_s8(
   xnn_operator_t max_pooling_op,
   size_t batch_size,
@@ -625,6 +742,30 @@ enum xnn_status xnn_reshape_max_pooling2d_nhwc_f32(
   pthreadpool_t threadpool)
 {
   return reshape_max_pooling2d_nhwc(
+    max_pooling_op, xnn_operator_type_max_pooling_nhwc_f32,
+    batch_size, input_height, input_width,
+    channels, input_pixel_stride, output_pixel_stride,
+    /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+    /*log2_output_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+    max_pooling_op->maxpool_config,
+    &max_pooling_op->params.f32_minmax, sizeof(max_pooling_op->params.f32_minmax),
+    output_height_out, output_width_out,
+    threadpool);
+}
+
+enum xnn_status xnn_reshape_input_t_max_pooling2d_nhwc_f32(
+  xnn_operator_t max_pooling_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool)
+{
+  return reshape_input_t_max_pooling2d_nhwc(
     max_pooling_op, xnn_operator_type_max_pooling_nhwc_f32,
     batch_size, input_height, input_width,
     channels, input_pixel_stride, output_pixel_stride,
