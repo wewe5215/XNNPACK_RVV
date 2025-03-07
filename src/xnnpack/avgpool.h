@@ -17,14 +17,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define DECLARE_F32_AVGPOOL_MINMAX_UKERNEL_FUNCTION(fn_name) \
-  XNN_INTERNAL void fn_name(                              \
-      size_t kernel_elements,                             \
-      size_t total_output,                                \
-      const float* input,                                 \
-      float* output,                                      \
-      const struct xnn_f32_scaleminmax_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
-DECLARE_F32_AVGPOOL_MINMAX_UKERNEL_FUNCTION(xnn_f32_maxpool_cnhw_minmax_ukernel_9p8x__rvv_c2v)
 
 
 #define XNN_UKERNEL_MULTIPASS(arch_flags, ukernel, channel_tile, channel_scaled_tile, primary_tile, incremental_tile, init_params) \

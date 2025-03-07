@@ -10,6 +10,9 @@ void xnn_f32_avgpool_cnhw_minmax_ukernel_7p7x__rvv_c4v(
 {
   assert(kernel_elements != 0);
   assert(total_output != 0);
+  assert(input != NULL);
+  assert(output != NULL);
+  assert(params != NULL);
 
   const float scale = params->scalar.scale;
   const float min = params->scalar.min;
@@ -75,5 +78,5 @@ void xnn_f32_avgpool_cnhw_minmax_ukernel_7p7x__rvv_c4v(
     input = (const float*) ((uintptr_t) input + (kernel_elements * nr << 2));
     o += nr;
     total_output -= nr;
-  } while (total_output != 0);
+  } while (total_output > 0);
 }

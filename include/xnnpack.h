@@ -2497,6 +2497,20 @@ enum xnn_status xnn_create_average_pooling2d_nhwc_f32(
   uint32_t flags,
   xnn_operator_t* average_pooling_op_out);
 
+enum xnn_status xnn_create_input_t_average_pooling2d_nhwc_f32(
+  uint32_t input_padding_top,
+  uint32_t input_padding_right,
+  uint32_t input_padding_bottom,
+  uint32_t input_padding_left,
+  uint32_t pooling_height,
+  uint32_t pooling_width,
+  uint32_t stride_height,
+  uint32_t stride_width,
+  float output_min,
+  float output_max,
+  uint32_t flags,
+  xnn_operator_t* average_pooling_op_out);
+
 enum xnn_status xnn_reshape_average_pooling2d_nhwc_f32(
   xnn_operator_t average_pooling_op,
   size_t batch_size,
@@ -2511,7 +2525,27 @@ enum xnn_status xnn_reshape_average_pooling2d_nhwc_f32(
   size_t* output_width_out,
   pthreadpool_t threadpool);
 
+enum xnn_status xnn_reshape_input_t_average_pooling2d_nhwc_f32(
+  xnn_operator_t average_pooling_op,
+  size_t batch_size,
+  size_t input_height,
+  size_t input_width,
+  size_t channels,
+  size_t input_pixel_stride,
+  size_t output_pixel_stride,
+  size_t* workspace_size,
+  size_t* workspace_alignment,
+  size_t* output_height_out,
+  size_t* output_width_out,
+  pthreadpool_t threadpool);
+
 enum xnn_status xnn_setup_average_pooling2d_nhwc_f32(
+  xnn_operator_t average_pooling_op,
+  void* workspace,
+  const float* input,
+  float* output);
+
+enum xnn_status xnn_setup_input_t_average_pooling2d_nhwc_f32(
   xnn_operator_t average_pooling_op,
   void* workspace,
   const float* input,

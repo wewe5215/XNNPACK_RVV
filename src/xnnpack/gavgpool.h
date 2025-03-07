@@ -18,6 +18,14 @@
 extern "C" {
 #endif
 
+#define DECLARE_F32_AVGPOOL_MINMAX_UKERNEL_FUNCTION(fn_name) \
+  XNN_INTERNAL void fn_name(                              \
+      size_t kernel_elements,                             \
+      size_t total_output,                                \
+      const float* input,                                 \
+      float* output,                                      \
+      const struct xnn_f32_scaleminmax_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
+DECLARE_F32_AVGPOOL_MINMAX_UKERNEL_FUNCTION(xnn_f32_avgpool_cnhw_minmax_ukernel_7p7x__rvv_c4v)
 
 #define DECLARE_F32_GAVGPOOL_MINMAX_MULTIPASS_UKERNEL_FUNCTION(fn_name) \
   XNN_INTERNAL void fn_name(                                            \
