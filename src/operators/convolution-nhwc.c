@@ -3552,11 +3552,11 @@ static enum xnn_status reshape_input_T_gemm(
   memcpy(&convolution_op->context.input_T_gemm.input_T_gemm.gemm.params, &convolution_op->params, sizeof(convolution_op->context.input_T_gemm.input_T_gemm.gemm.params));
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.fused_params = &convolution_op->context.input_T_gemm.input_T_gemm.gemm.params;
 
-  size_t nc = group_output_channels;
+  size_t nc = batch_output_size;
   if (num_threads > 1) {
-    const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
+    const size_t num_other_tiles = groups * divide_round_up(group_output_channels, mr);
     const size_t target_tiles_per_thread = 5;
-    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    const size_t max_nc = divide_round_up(batch_output_size * num_other_tiles, num_threads * target_tiles_per_thread);
     if (max_nc < nc) {
       nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
     }
@@ -3648,11 +3648,11 @@ static enum xnn_status reshape_input_T_pruned_gemm(
   memcpy(&convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm.params, &convolution_op->params, sizeof(convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm.params));
   convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm.fused_params = &convolution_op->context.input_T_gemm.input_T_gemm.pruned_gemm.params;
 
-  size_t nc = group_output_channels;
+  size_t nc = batch_output_size;
   if (num_threads > 1) {
-    const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
+    const size_t num_other_tiles = groups * divide_round_up(group_output_channels, mr);
     const size_t target_tiles_per_thread = 5;
-    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    const size_t max_nc = divide_round_up(batch_output_size * num_other_tiles, num_threads * target_tiles_per_thread);
     if (max_nc < nc) {
       nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
     }
@@ -4019,11 +4019,11 @@ static enum xnn_status reshape_input_T_igemm(
   convolution_op->context.input_T_gemm.input_T_gemm.gemm.bias = convolution_op->bias;
   xnn_log_debug("kernel address: %p", convolution_op->kernel);
   xnn_log_debug("bias address: %p", convolution_op->bias);
-  size_t nc = group_output_channels;
+  size_t nc = batch_output_size;
   if (num_threads > 1) {
-    const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
+    const size_t num_other_tiles = groups * divide_round_up(group_output_channels, mr);
     const size_t target_tiles_per_thread = 5;
-    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    const size_t max_nc = divide_round_up(batch_output_size * num_other_tiles, num_threads * target_tiles_per_thread);
     if (max_nc < nc) {
       nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
     }
@@ -4110,11 +4110,11 @@ static enum xnn_status reshape_input_T_pruned_igemm(
   xnn_log_debug("kernel address: %p", convolution_op->kernel);
   xnn_log_debug("bias address: %p", convolution_op->bias);
   xnn_log_debug("pruned_im2col_col_cnt: %zu", pruned_im2col_col_cnt);
-  size_t nc = group_output_channels;
+  size_t nc = batch_output_size;
   if (num_threads > 1) {
-    const size_t num_other_tiles = groups * divide_round_up(batch_output_size, mr);
+    const size_t num_other_tiles = groups * divide_round_up(group_output_channels, mr);
     const size_t target_tiles_per_thread = 5;
-    const size_t max_nc = divide_round_up(group_output_channels * num_other_tiles, num_threads * target_tiles_per_thread);
+    const size_t max_nc = divide_round_up(batch_output_size * num_other_tiles, num_threads * target_tiles_per_thread);
     if (max_nc < nc) {
       nc = min(nc, divide_round_up(nc, max_nc * nr) * nr);
     }
