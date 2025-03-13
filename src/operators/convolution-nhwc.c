@@ -5115,13 +5115,24 @@ static enum xnn_status setup_input_T_pruned_igemm_x1v(
   void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
 
   if(convolution_op->stride_height == 2){
-    xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v");
-  	xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
-    	output_height, output_width,
-    	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
-    	convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-    	convolution_op->input, input_packed_ptr
-  	);
+    if(convolution_op->padding_top){
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v");
+      xnn_x32_packa_in_T_gemm_im2col_s2_d1_x1v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr
+      );
+    }
+    else{
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v");
+      xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+      output_height, output_width,
+      kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+      convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+      convolution_op->input, input_packed_ptr, nr
+      );
+    }
   }
   else if(convolution_op->stride_height == 1){
   	xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s1_d1_1x1v");
@@ -5164,13 +5175,35 @@ static enum xnn_status setup_input_T_pruned_igemm_x2v(
   void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
 
   if(convolution_op->stride_height == 2){
-    xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v");
-  	xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
-    	output_height, output_width,
-    	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
-    	convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-    	convolution_op->input, input_packed_ptr
-  	);
+    if(convolution_op->padding_top){
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v");
+      xnn_x32_packa_in_T_gemm_im2col_s2_d1_x2v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr
+      );
+    }
+    else{
+      if(output_width >= (3 * nr) >> 2){
+        xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x2v");
+        xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x2v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr, nr
+        );
+      }
+      else{
+        xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v");
+        xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr, nr
+        );
+      }
+    }
   }
   else if(convolution_op->stride_height == 1){
   	if(output_width >= (3 * nr) >> 2){
@@ -5344,13 +5377,44 @@ static enum xnn_status setup_input_T_pruned_igemm_x8v(
   void* input_packed_ptr = xnn_allocate_simd_memory(aligned_total_input_T_size);
 
   if(convolution_op->stride_height == 2){
-    xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v");
-  	xnn_x32_packa_in_T_gemm_im2col_s1_d1_4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
-    	output_height, output_width,
-    	kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
-    	convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
-    	convolution_op->input, input_packed_ptr
-  	);
+    if(convolution_op->padding_top){
+      xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v");
+      xnn_x32_packa_in_T_gemm_im2col_s2_d1_x8v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr
+      );
+    }
+    else{
+      if(output_width >= (3 * nr) >> 3){
+        xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x4v");
+        xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x4v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr, nr
+        );
+      }
+      else if(output_width >= (3 * nr) >> 4){
+        xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x2v");
+        xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x2v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr, nr
+        );
+      }
+      else{
+        xnn_log_debug("using xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v");
+        xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v(batch_size, convolution_op->input_height, convolution_op->input_width, group_input_channels, \
+        output_height, output_width,
+        kernel_height, kernel_width, convolution_op->stride_height, convolution_op->stride_width, \
+        convolution_op->dilation_height, convolution_op->dilation_width, convolution_op->padding_top, convolution_op->padding_left, \
+        convolution_op->input, input_packed_ptr, nr
+        );
+      }
+    }
   }
   else if(convolution_op->stride_height == 1){
   	if(output_width >= (3 * nr) >> 2){
