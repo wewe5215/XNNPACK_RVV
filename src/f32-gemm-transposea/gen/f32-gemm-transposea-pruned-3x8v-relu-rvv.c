@@ -69,7 +69,7 @@ void xnn_f32_transpose_a_pruned_gemm_relu_ukernel_3x8v__rvv(
     vfloat32m8_t vacc1 =  __riscv_vfmv_v_f_f32m8(*bias1, vl);
     vfloat32m8_t vacc2 =  __riscv_vfmv_v_f_f32m8(*bias2, vl);
 
-    size_t k = kc;
+    size_t k = w_stride;
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
@@ -93,8 +93,9 @@ void xnn_f32_transpose_a_pruned_gemm_relu_ukernel_3x8v__rvv(
     c1 = (float*) ((uintptr_t) c1 + cn_stride);
     __riscv_vse32_v_f32m8(c2, vacc2, vl);
     c2 = (float*) ((uintptr_t) c2 + cn_stride);
-    w0 = (const float*) ((uintptr_t) w0 - kc);
-    w1 = (const float*) ((uintptr_t) w1 - kc);
-    w2 = (const float*) ((uintptr_t) w2 - kc);
+    w0 = (const float*) ((uintptr_t) w0 - w_stride);
+    w1 = (const float*) ((uintptr_t) w1 - w_stride);
+    w2 = (const float*) ((uintptr_t) w2 - w_stride);
+    a += nr * (kc >> 2);
   } while (nc != 0);
 }

@@ -115,7 +115,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_8x2v__rvv(
     vfloat32m2_t vacc6 =  __riscv_vfmv_v_f_f32m2(*bias6, vl);
     vfloat32m2_t vacc7 =  __riscv_vfmv_v_f_f32m2(*bias7, vl);
 
-    size_t k = kc;
+    size_t k = w_stride;
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
@@ -173,13 +173,14 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_8x2v__rvv(
     c6 = (float*) ((uintptr_t) c6 + cn_stride);
     __riscv_vse32_v_f32m2(c7, vacc7, vl);
     c7 = (float*) ((uintptr_t) c7 + cn_stride);
-    w0 = (const float*) ((uintptr_t) w0 - kc);
-    w1 = (const float*) ((uintptr_t) w1 - kc);
-    w2 = (const float*) ((uintptr_t) w2 - kc);
-    w3 = (const float*) ((uintptr_t) w3 - kc);
-    w4 = (const float*) ((uintptr_t) w4 - kc);
-    w5 = (const float*) ((uintptr_t) w5 - kc);
-    w6 = (const float*) ((uintptr_t) w6 - kc);
-    w7 = (const float*) ((uintptr_t) w7 - kc);
+    w0 = (const float*) ((uintptr_t) w0 - w_stride);
+    w1 = (const float*) ((uintptr_t) w1 - w_stride);
+    w2 = (const float*) ((uintptr_t) w2 - w_stride);
+    w3 = (const float*) ((uintptr_t) w3 - w_stride);
+    w4 = (const float*) ((uintptr_t) w4 - w_stride);
+    w5 = (const float*) ((uintptr_t) w5 - w_stride);
+    w6 = (const float*) ((uintptr_t) w6 - w_stride);
+    w7 = (const float*) ((uintptr_t) w7 - w_stride);
+    a += nr * (kc >> 2);
   } while (nc != 0);
 }

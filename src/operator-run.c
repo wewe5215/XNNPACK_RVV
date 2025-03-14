@@ -514,7 +514,7 @@ const size_t cm_stride = context->cm_stride;
 context->ukernel.function[XNN_UARCH_DEFAULT](
     mr_block_size,
     nr_block_size,
-    context->k_scaled,
+    context->a_stride,
     (const void*) ((uintptr_t) context->packed_a + nr_block_start * context->a_stride),
     w_stride,
     (const void*) ((uintptr_t) context->kernel + mr_block_start * w_stride),

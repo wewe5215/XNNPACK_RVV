@@ -52,7 +52,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x8v__rvv(
 
     vfloat32m8_t vacc0 =  __riscv_vfmv_v_f_f32m8(*bias0, vl);
 
-    size_t k = kc;
+    size_t k = w_stride;
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
@@ -68,6 +68,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x8v__rvv(
     // store 1 x vl results to c
     __riscv_vse32_v_f32m8(c0, vacc0, vl);
     c0 = (float*) ((uintptr_t) c0 + cn_stride);
-    w0 = (const float*) ((uintptr_t) w0 - kc);
+    w0 = (const float*) ((uintptr_t) w0 - w_stride);
+    a += nr * (kc >> 2);
   } while (nc != 0);
 }

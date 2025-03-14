@@ -82,7 +82,7 @@ void xnn_${DATATYPE_SPEC}_transpose_a_pruned_gemm${SUFFIX}_ukernel_${MR}x${LMUL}
     $for M in range(MR):  
       vfloat32m${LMUL}_t vacc${M} =  __riscv_vfmv_v_f_f32m${LMUL}(*bias${M}, vl);
 
-    size_t k = kc;
+    size_t k = w_stride;
     size_t idx_indice_arr = 0;
     do {
       $for M in range(MR):
@@ -109,6 +109,7 @@ void xnn_${DATATYPE_SPEC}_transpose_a_pruned_gemm${SUFFIX}_ukernel_${MR}x${LMUL}
       __riscv_vse32_v_f32m${LMUL}(c${M}, vacc${M}, vl);
       c${M} = (float*) ((uintptr_t) c${M} + cn_stride);
     $for M in range(MR):  
-      w${M} = (const float*) ((uintptr_t) w${M} - kc);
+      w${M} = (const float*) ((uintptr_t) w${M} - w_stride);
+    a += nr * (kc >> 2);
   } while (nc != 0);
 }
