@@ -35,7 +35,7 @@ void xnn_f32_transpose_a_pruned_gemm_ukernel_1x2v__rvv(
   assert(bias != NULL);
   assert(w != NULL);
   assert(c != NULL);
-
+  const int log_nr = 4; // log16 = 4
   const float* w0 = w;
   float* c0 = c;
   const float* bias0 = bias;
@@ -54,7 +54,7 @@ void xnn_f32_transpose_a_pruned_gemm_ukernel_1x2v__rvv(
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
-      vfloat32m2_t vb = __riscv_vle32_v_f32m2(a + indice[idx_indice_arr], vl);
+      vfloat32m2_t vb = __riscv_vle32_v_f32m2(a + (indice[idx_indice_arr] << log_nr), vl);
       idx_indice_arr++;
       vacc0 = __riscv_vfmacc_vf_f32m2(vacc0, vw0, vb, vl);
       k -= sizeof(float);

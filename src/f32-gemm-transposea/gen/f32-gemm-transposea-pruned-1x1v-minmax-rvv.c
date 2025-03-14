@@ -35,7 +35,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x1v__rvv(
   assert(bias != NULL);
   assert(w != NULL);
   assert(c != NULL);
-
+  const int log_nr = 3; // log8 = 3
   const float vmin = params->scalar.min;
   const float vmax = params->scalar.max;
   const float* w0 = w;
@@ -56,7 +56,7 @@ void xnn_f32_transpose_a_pruned_gemm_minmax_ukernel_1x1v__rvv(
     size_t idx_indice_arr = 0;
     do {
       const float vw0 = *w0++;
-      vfloat32m1_t vb = __riscv_vle32_v_f32m1(a + indice[idx_indice_arr], vl);
+      vfloat32m1_t vb = __riscv_vle32_v_f32m1(a + (indice[idx_indice_arr] << log_nr), vl);
       idx_indice_arr++;
       vacc0 = __riscv_vfmacc_vf_f32m1(vacc0, vw0, vb, vl);
       k -= sizeof(float);
