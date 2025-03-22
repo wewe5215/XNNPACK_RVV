@@ -302,6 +302,182 @@ void xnn_x32_pack_transpose_ukernel_x4v__rvv_u8(
     weights += nc * kc;
   } while (--g != 0);
 }
+void im2col_local_avgpool_s2_d1_p0_with_pack_1x(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
+  const int output_height, const int output_width,
+  const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
+  const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
+  uint32_t* input, uint32_t* output, const int nr){
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = group_input_channels * output_size * batch_size;
+  
+  const size_t input_size = input_height*input_width*batch_size;
+  uint32_t* in_ptr = input;
+  uint32_t* out_ptr = output;
+  const int vlmax = __riscv_vsetvlmax_e32m1();
+  int input_stride;
+  int remainder = 0;
+  int input_cursor = 0;
+  int out_h, out_w, batch;
+  int im2col_cur = 0;
+  int batch_cur = 0;
+  int output_cur = 0;
+  while(output_cur < batch_output_size){
+      int out_h = output_cur / output_width;
+      int out_w = output_cur % output_width;
+      batch_cur = output_cur / output_size;
+      int base = batch_cur * output_size;
+      in_ptr = input + input_cursor;
+      for(int k_h = 0; k_h < kernel_height; k_h++){
+          for(int k_w = 0; k_w < kernel_width; k_w++){
+              uint32_t* in_ptr_now = in_ptr + k_w;
+              int vl = min(vlmax, output_width - out_w);
+              vuint32m1_t v_w0 = __riscv_vlse32_v_u32m1 (in_ptr_now, stride_width << 2, vl);
+              __riscv_vse32_v_u32m1(out_ptr, v_w0, vl);
+              out_ptr += vl;
+              int cur = vl;
+              uint32_t* in_ptr_now_rem = in_ptr_now + ((output_width - out_w) << 1) + input_width;
+              while(cur < nr){
+                  int vl_rem = min(nr - cur, output_width);
+                  int vl_for_vector = -(output_cur + cur < batch_output_size) & vl_rem;
+                  v_w0 = __riscv_vlse32_v_u32m1 (in_ptr_now_rem, stride_width << 2, vl_for_vector);
+                  __riscv_vse32_v_u32m1(out_ptr, v_w0, vl_for_vector);
+                  out_ptr += vl_rem;
+                  cur += vl_rem;
+                  in_ptr_now_rem += input_width << 1;
+              }
+          }
+          in_ptr += input_width;
+      }
+      output_cur += nr;
+      int sliding_window_row_diff = output_cur / output_width - out_h;
+      input_cursor += (
+          -(sliding_window_row_diff > 0) & 
+              (
+                  ((output_width - out_w) << 1) + input_width \
+                  + (sliding_window_row_diff - 1) * (input_width << 1)
+              )
+          ) \
+          + (((output_cur % output_width) - (-(sliding_window_row_diff == 0) & out_w)) << 1);
+  }
+}
+
+void im2col_local_avgpool_s2_d1_p0_with_pack_2x(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
+  const int output_height, const int output_width,
+  const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
+  const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
+  uint32_t* input, uint32_t* output, const int nr){
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = group_input_channels * output_size * batch_size;
+  
+  const size_t input_size = input_height*input_width*batch_size;
+  uint32_t* in_ptr = input;
+  uint32_t* out_ptr = output;
+  const int vlmax = __riscv_vsetvlmax_e32m2();
+  int input_stride;
+  int remainder = 0;
+  int input_cursor = 0;
+  int out_h, out_w, batch;
+  int im2col_cur = 0;
+  int batch_cur = 0;
+  int output_cur = 0;
+  while(output_cur < batch_output_size){
+      int out_h = output_cur / output_width;
+      int out_w = output_cur % output_width;
+      batch_cur = output_cur / output_size;
+      int base = batch_cur * output_size;
+      in_ptr = input + input_cursor;
+      for(int k_h = 0; k_h < kernel_height; k_h++){
+          for(int k_w = 0; k_w < kernel_width; k_w++){
+              uint32_t* in_ptr_now = in_ptr + k_w;
+              int vl = min(vlmax, output_width - out_w);
+              vuint32m2_t v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_now, stride_width << 2, vl);
+              __riscv_vse32_v_u32m2(out_ptr, v_w0, vl);
+              out_ptr += vl;
+              int cur = vl;
+              uint32_t* in_ptr_now_rem = in_ptr_now + ((output_width - out_w) << 1) + input_width;
+              while(cur < nr){
+                  int vl_rem = min(nr - cur, output_width);
+                  int vl_for_vector = -(output_cur + cur < batch_output_size) & vl_rem;
+                  v_w0 = __riscv_vlse32_v_u32m2 (in_ptr_now_rem, stride_width << 2, vl_for_vector);
+                  __riscv_vse32_v_u32m2(out_ptr, v_w0, vl_for_vector);
+                  out_ptr += vl_rem;
+                  cur += vl_rem;
+                  in_ptr_now_rem += input_width << 1;
+              }
+          }
+          in_ptr += input_width;
+      }
+      output_cur += nr;
+      int sliding_window_row_diff = output_cur / output_width - out_h;
+      input_cursor += (
+          -(sliding_window_row_diff > 0) & 
+              (
+                  ((output_width - out_w) << 1) + input_width \
+                  + (sliding_window_row_diff - 1) * (input_width << 1)
+              )
+          ) \
+          + (((output_cur % output_width) - (-(sliding_window_row_diff == 0) & out_w)) << 1);
+  }
+}
+
+void im2col_local_avgpool_s2_d1_p0_with_pack_4x(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
+  const int output_height, const int output_width,
+  const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \
+  const int dilation_height, const int dilation_width, const int input_padding_top,const int input_padding_left, \
+  uint32_t* input, uint32_t* output, const int nr){
+  const size_t output_size = output_height * output_width;
+  const size_t batch_output_size = group_input_channels * output_size * batch_size;
+  
+  const size_t input_size = input_height*input_width*batch_size;
+  uint32_t* in_ptr = input;
+  uint32_t* out_ptr = output;
+  const int vlmax = __riscv_vsetvlmax_e32m4();
+  int input_stride;
+  int remainder = 0;
+  int input_cursor = 0;
+  int out_h, out_w, batch;
+  int im2col_cur = 0;
+  int batch_cur = 0;
+  int output_cur = 0;
+  while(output_cur < batch_output_size){
+      int out_h = output_cur / output_width;
+      int out_w = output_cur % output_width;
+      batch_cur = output_cur / output_size;
+      int base = batch_cur * output_size;
+      in_ptr = input + input_cursor;
+      for(int k_h = 0; k_h < kernel_height; k_h++){
+          for(int k_w = 0; k_w < kernel_width; k_w++){
+              uint32_t* in_ptr_now = in_ptr + k_w;
+              int vl = min(vlmax, output_width - out_w);
+              vuint32m4_t v_w0 = __riscv_vlse32_v_u32m4 (in_ptr_now, stride_width << 2, vl);
+              __riscv_vse32_v_u32m4(out_ptr, v_w0, vl);
+              out_ptr += vl;
+              int cur = vl;
+              uint32_t* in_ptr_now_rem = in_ptr_now + ((output_width - out_w) << 1) + input_width;
+              while(cur < nr){
+                  int vl_rem = min(nr - cur, output_width);
+                  int vl_for_vector = -(output_cur + cur < batch_output_size) & vl_rem;
+                  v_w0 = __riscv_vlse32_v_u32m4 (in_ptr_now_rem, stride_width << 2, vl_for_vector);
+                  __riscv_vse32_v_u32m4(out_ptr, v_w0, vl_for_vector);
+                  out_ptr += vl_rem;
+                  cur += vl_rem;
+                  in_ptr_now_rem += input_width << 1;
+              }
+          }
+          in_ptr += input_width;
+      }
+      output_cur += nr;
+      int sliding_window_row_diff = output_cur / output_width - out_h;
+      input_cursor += (
+          -(sliding_window_row_diff > 0) & 
+              (
+                  ((output_width - out_w) << 1) + input_width \
+                  + (sliding_window_row_diff - 1) * (input_width << 1)
+              )
+          ) \
+          + (((output_cur % output_width) - (-(sliding_window_row_diff == 0) & out_w)) << 1);
+  }
+}
 void xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v(uint32_t batch_size, const size_t input_height, const size_t input_width, size_t group_input_channels, \
   const int output_height, const int output_width,
   const size_t kernel_height, const size_t kernel_width, const size_t stride_height, const size_t stride_width, \

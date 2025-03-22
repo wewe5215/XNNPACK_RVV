@@ -1149,13 +1149,15 @@ struct average_pooling_context {
   size_t indirect_input_height_stride;
   size_t input_offset;
   size_t input_batch_stride;
-
+  const void* input;
+  const void* im2col_packed;
   // Stride to get to the next y of input. Used when we have compressed indirection buffers (i.e. indirection buffers
   // contain only pointers to the first row of input).
   size_t input_y_stride;
   size_t indirect_top_height;  // Number of output rows that form the top section of indirection buffer.
   size_t indirect_bot_start;  // Smallest output row y for the bottom section of indirection buffer.
-
+  size_t nr;
+  size_t log2_element_size;
   void* output;
   size_t output_batch_stride;
   size_t output_height_stride;
@@ -1173,6 +1175,7 @@ struct average_pooling_context {
   union {
     xnn_avgpool_unipass_ukernel_fn unipass_ukernel;
     xnn_avgpool_multipass_ukernel_fn multipass_ukernel;
+    xnn_input_t_avgpool_ukernel_fn input_t_ukernel;
   };
   size_t multipass_batch_stride;
   size_t multipass_pixel_stride;
@@ -1195,6 +1198,10 @@ struct average_pooling_context {
       size_t thread_index,
       size_t batch_index,
       size_t output_y);
+  XNN_PRIVATE void xnn_compute_input_t_local_average_pooling(
+    const struct average_pooling_context context[restrict XNN_MIN_ELEMENTS(1)],
+    size_t mr_block_start,
+    size_t mr_block_size);
 #endif
 
 struct pixelwise_average_pooling_context {
@@ -1274,7 +1281,7 @@ struct global_average_pooling_nwc_context {
   union {
     xnn_gavgpool_unipass_ukernel_fn unipass_ukernel;
     xnn_gavgpool_multipass_ukernel_fn multipass_ukernel;
-    xnn_input_t_gavgpool_ukernel_fn input_t_ukernel;
+    xnn_input_t_avgpool_ukernel_fn input_t_ukernel;
   };
   size_t multipass_batch_stride;
   void* multipass_buffer;

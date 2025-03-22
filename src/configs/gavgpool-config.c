@@ -122,7 +122,7 @@ static void init_f32_gavgpool_config(void) {
     const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
     f32_gavgpool_config.unipass = (xnn_gavgpool_unipass_ukernel_fn) xnn_f32_gavgpool_minmax_ukernel_7x__rvv_c2v;
     f32_gavgpool_config.multipass = (xnn_gavgpool_multipass_ukernel_fn) xnn_f32_gavgpool_minmax_ukernel_7p7x__rvv_c2v;
-    f32_gavgpool_config.input_t_pass = (xnn_input_t_gavgpool_ukernel_fn) xnn_f32_avgpool_cnhw_minmax_ukernel_7p7x__rvv_c4v;
+    f32_gavgpool_config.input_t_pass = (xnn_input_t_avgpool_ukernel_fn) xnn_f32_avgpool_cnhw_minmax_ukernel_7p7x__rvv_c4v;
     f32_gavgpool_config.init.f32 = xnn_init_f32_scaleminmax_scalar_params;
     f32_gavgpool_config.update.f32 = xnn_update_f32_scaleminmax_scalar_params;
     f32_gavgpool_config.row_tile = 7;

@@ -117,12 +117,15 @@ static void init_f32_avgpool_config(void) {
     f32_avgpool_config.incremental_tile = 8;
     f32_avgpool_config.channel_tile = 1;
   #elif XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+    const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
     f32_avgpool_config.unipass = (xnn_avgpool_unipass_ukernel_fn) xnn_f32_avgpool_minmax_ukernel_9x__rvv_c2v;
     f32_avgpool_config.multipass = (xnn_avgpool_multipass_ukernel_fn) xnn_f32_avgpool_minmax_ukernel_9p8x__rvv_c2v;
+    f32_avgpool_config.input_t_pass = (xnn_input_t_avgpool_ukernel_fn) xnn_f32_avgpool_cnhw_minmax_ukernel_4p4x__rvv_c4v;
     f32_avgpool_config.init.f32 = xnn_init_f32_scaleminmax_scalar_params;
     f32_avgpool_config.primary_tile = 9;
     f32_avgpool_config.incremental_tile = 8;
     f32_avgpool_config.channel_tile = 4;
+    f32_avgpool_config.nr = hardware_config->vlenb;
   #else
     f32_avgpool_config.unipass = (xnn_avgpool_unipass_ukernel_fn) xnn_f32_avgpool_minmax_ukernel_9x__scalar_c1;
     f32_avgpool_config.multipass = (xnn_avgpool_multipass_ukernel_fn) xnn_f32_avgpool_minmax_ukernel_9p8x__scalar_c1;

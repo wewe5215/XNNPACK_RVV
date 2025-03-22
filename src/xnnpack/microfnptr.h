@@ -891,7 +891,7 @@ typedef void (*xnn_gavgpool_unipass_ukernel_fn)(
     void* output,
     const void* params);
 
-typedef void (*xnn_input_t_gavgpool_ukernel_fn)(
+typedef void (*xnn_input_t_avgpool_ukernel_fn)(
     size_t kernel_elements,
     size_t total_output,
     const void* input,

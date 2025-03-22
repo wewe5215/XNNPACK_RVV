@@ -109,6 +109,63 @@ typedef void (*xnn_pack_f32_with_im2col_input_T_nr)(
   uint32_t* output,
   const int nr);
 
+XNN_INTERNAL void im2col_local_avgpool_s2_d1_p0_with_pack_1x(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output,
+  const int nr);
+
+XNN_INTERNAL void im2col_local_avgpool_s2_d1_p0_with_pack_2x(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output,
+  const int nr);
+
+XNN_INTERNAL void im2col_local_avgpool_s2_d1_p0_with_pack_4x(
+  uint32_t batch_size,
+  const size_t input_height,
+  const size_t input_width,
+  size_t group_input_channels,
+  const int output_height,
+  const int output_width,
+  const size_t kernel_height,
+  const size_t kernel_width,
+  const size_t stride_height,
+  const size_t stride_width,
+  const int dilation_height,
+  const int dilation_width,
+  const int input_padding_top,
+  const int input_padding_left,
+  uint32_t* input,
+  uint32_t* output,
+  const int nr);
+  
 XNN_INTERNAL void xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x1v(
   uint32_t batch_size,
   const size_t input_height,
