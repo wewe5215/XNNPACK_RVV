@@ -2083,6 +2083,22 @@ DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION(xnn_f32_dwconv2d_chw_ukernel_5x
 DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION(xnn_f32_dwconv2d_chw_ukernel_5x5s2p2__wasmsimd_x86_splat_3x4)
 DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION(xnn_f32_dwconv2d_chw_ukernel_5x5s2p2__wasmsimd_x86_splat_3x4_acc2)
 
+#define DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION_WITH_SIZELESS_INTRINSIC(fn_name) \
+  XNN_INTERNAL void fn_name(                                      \
+    size_t input_height,                                          \
+    size_t input_width,                                           \
+    const float* input,                                           \
+    const float* weights,                                         \
+    const float* zero,                                            \
+    float* output,                                                \
+    const int32_t* mask_table,                                    \
+    uint32_t padding_top,                                         \
+    const union xnn_f32_minmax_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
+
+DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION_WITH_SIZELESS_INTRINSIC(xnn_f32_dwconv2d_chw_ukernel_3x3p1__rvv_3x4_acc2)
+DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION_WITH_SIZELESS_INTRINSIC(xnn_f32_dwconv2d_chw_ukernel_3x3s2p1__rvv_2x4_acc2)
+DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION_WITH_SIZELESS_INTRINSIC(xnn_f32_dwconv2d_chw_ukernel_5x5p2__rvv_4x4)
+DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION_WITH_SIZELESS_INTRINSIC(xnn_f32_dwconv2d_chw_ukernel_5x5s2p2__rvv_1x4_acc2)
 
 #define DECLARE_F16_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION(fn_name) \
   XNN_INTERNAL void fn_name(                                      \
