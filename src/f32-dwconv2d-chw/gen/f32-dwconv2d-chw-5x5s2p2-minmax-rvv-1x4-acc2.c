@@ -22,7 +22,6 @@ void xnn_f32_dwconv2d_chw_ukernel_5x5s2p2__rvv_1x4_acc2(
   const float* weights,
   const float* zero,
   float* output,
-  const int32_t* mask_table,
   uint32_t padding_top,
   const union xnn_f32_minmax_params params[restrict XNN_MIN_ELEMENTS(1)]) XNN_OOB_READS
 {
@@ -34,8 +33,9 @@ assert(padding_top <= 2);
 
 const size_t nr = __riscv_vsetvlmax_e32m1();
 size_t vl = nr;
-const vuint32m1_t vmask_even = __riscv_vle32_v_u32m1((const uint32_t*) &mask_table[(nr-1) - (((input_width - nr) & ((vl << 3) - 1)) >> 3)], vl);
-const vuint32m1_t vmask_odd = __riscv_vle32_v_u32m1((const uint32_t*) &mask_table[nr - ((((input_width - nr) & ((vl << 3) - 1)) + nr) >> 3)], vl);
+int32_t mask[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0};
+const vuint32m1_t vmask_even = __riscv_vle32_v_u32m1((const uint32_t*) &mask[(nr-1) - (((input_width - nr) & ((vl << 3) - 1)) >> 3)], vl);
+const vuint32m1_t vmask_odd = __riscv_vle32_v_u32m1((const uint32_t*) &mask[nr - ((((input_width - nr) & ((vl << 3) - 1)) + nr) >> 3)], vl);
 
 
 const uint32_t padding_top_less_1 = padding_top - 1;

@@ -1030,11 +1030,37 @@ struct dwconv2d_context {
   };
 };
 
+struct input_T_dwconv2d_context {
+  size_t input_height;
+  size_t input_width;
+  const void* input;
+  const void* zero;
+  uint32_t input_padding_top;
+  size_t input_channel_stride;
+  size_t input_batch_stride;
+  const void* packed_weights;
+  size_t weights_channel_stride;
+  void* output;
+  size_t output_channel_stride;
+  size_t output_batch_stride;
+  union {
+    union xnn_f32_minmax_params f32;
+  } params;
+  union {
+    xnn_input_T_dwconv_ukernel_fn chw_ukernel;
+  };
+};
+
 #ifndef __cplusplus
   XNN_PRIVATE void xnn_compute_dwconv2d_chw(
       const struct dwconv2d_context context[restrict XNN_MIN_ELEMENTS(1)],
       size_t batch_index,
       size_t channel);
+  XNN_PRIVATE void xnn_compute_input_T_dwconv2d_cnhw(
+    const struct input_T_dwconv2d_context context[restrict XNN_MIN_ELEMENTS(1)],
+    size_t channel,
+    size_t batch_index
+    );
 #endif
 
 struct max_pooling_context {

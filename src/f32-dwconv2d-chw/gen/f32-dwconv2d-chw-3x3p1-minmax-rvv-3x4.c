@@ -11,7 +11,6 @@ void xnn_f32_dwconv2d_chw_ukernel_3x3p1__rvv_3x4_acc2(
   const float* weights,
   const float* zero,
   float* output,
-  const int32_t* mask_table,
   uint32_t padding_top,
   const union xnn_f32_minmax_params params[restrict XNN_MIN_ELEMENTS(1)])
 {
@@ -158,7 +157,8 @@ do {
     vfloat32m1_t vo0p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);
     vfloat32m1_t vo1p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);
     vfloat32m1_t vo2p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);
-    const vuint32m1_t vmask = __riscv_vle32_v_u32m1((const uint32_t*) &mask_table[(nr-1) - (((input_width >> 2) - 1) & (nr-1))], vl);
+    int32_t mask[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0};
+    const vuint32m1_t vmask = __riscv_vle32_v_u32m1((const uint32_t*) &mask[(nr-1) - (((input_width >> 2) - 1) & (nr-1))], vl);
     vi0x4567 = __riscv_vreinterpret_v_u32m1_f32m1(__riscv_vand_vv_u32m1(vmask, __riscv_vreinterpret_v_f32m1_u32m1(vi0x4567), vl));
     vi1x4567 = __riscv_vreinterpret_v_u32m1_f32m1(__riscv_vand_vv_u32m1(vmask, __riscv_vreinterpret_v_f32m1_u32m1(vi1x4567), vl));
     vi2x4567 = __riscv_vreinterpret_v_u32m1_f32m1(__riscv_vand_vv_u32m1(vmask, __riscv_vreinterpret_v_f32m1_u32m1(vi2x4567), vl));

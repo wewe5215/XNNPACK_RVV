@@ -141,7 +141,7 @@ XNN_INTERNAL struct xnn_dwconv_config* xnn_init_f32_dwconv_config();
 XNN_INTERNAL struct xnn_dwconv_config* xnn_init_qs8_qc8w_dwconv_config();
 XNN_INTERNAL struct xnn_dwconv_config* xnn_init_qs8_dwconv_config();
 XNN_INTERNAL struct xnn_dwconv_config* xnn_init_qu8_dwconv_config();
-
+XNN_INTERNAL struct xnn_input_T_dwconv_config* xnn_init_f32_input_T_dwconv_config();
 // Bilinear interpolation (2D).
 XNN_INTERNAL const struct xnn_ibilinear_config* xnn_init_f16_ibilinear_config();
 XNN_INTERNAL const struct xnn_ibilinear_config* xnn_init_f32_ibilinear_config();

@@ -22,12 +22,14 @@ static struct xnn_dwconv_config f32_dwconv_config[XNN_MAX_F32_DWCONV_UKERNELS] =
 static struct xnn_dwconv_config qs8_qc8w_dwconv_config[XNN_MAX_QC8_DWCONV_UKERNELS] = {0};
 static struct xnn_dwconv_config qs8_dwconv_config[XNN_MAX_QS8_DWCONV_UKERNELS] = {0};
 static struct xnn_dwconv_config qu8_dwconv_config[XNN_MAX_QU8_DWCONV_UKERNELS] = {0};
+static struct xnn_input_T_dwconv_config f32_input_T_dwconv_config = {0};
 
 XNN_INIT_ONCE_GUARD(f16_dwconv);
 XNN_INIT_ONCE_GUARD(f32_dwconv);
 XNN_INIT_ONCE_GUARD(qs8_qc8w_dwconv);
 XNN_INIT_ONCE_GUARD(qs8_dwconv);
 XNN_INIT_ONCE_GUARD(qu8_dwconv);
+XNN_INIT_ONCE_GUARD(f32_input_T_dwconv);
 
 static void init_f16_dwconv_config(void) {
   #if XNN_ARCH_ARM && XNN_ENABLE_ARM_FP16_VECTOR && XNN_ENABLE_ARM_FP16_SCALAR
@@ -1279,6 +1281,40 @@ static void init_qu8_dwconv_config(void) {
   #endif
 }
 
+static void init_f32_input_T_dwconv_config(void) {
+  #if XNN_ARCH_RISCV && XNN_ENABLE_RISCV_VECTOR
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  assert(hardware_config != NULL);
+  if (hardware_config->use_riscv_vector) {
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3.ukernel = (xnn_input_T_dwconv_ukernel_fn) xnn_f32_dwconv2d_chw_ukernel_3x3p1__rvv_3x4_acc2;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3.init.f32 = xnn_init_f32_minmax_scalar_params;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3.output_height_tile = 3;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3.output_width_tile = 4;
+    // nr is set to vlen * 1 / sizeof(float) = 1 * VLENB * 8 / 32 = VLENB / 4 = VLENB >> 2
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3.nr = hardware_config->vlenb >> 2;
+
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3s2.ukernel = (xnn_input_T_dwconv_ukernel_fn) xnn_f32_dwconv2d_chw_ukernel_3x3s2p1__rvv_2x4_acc2;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3s2.init.f32 = xnn_init_f32_minmax_scalar_params;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3s2.output_height_tile = 2;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3s2.output_width_tile = 4;
+    f32_input_T_dwconv_config.dwconv2d_chw_3x3s2.nr = hardware_config->vlenb >> 2;
+
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5.ukernel = (xnn_input_T_dwconv_ukernel_fn) xnn_f32_dwconv2d_chw_ukernel_5x5p2__rvv_4x4;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5.init.f32 = xnn_init_f32_minmax_scalar_params;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5.output_height_tile = 4;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5.output_width_tile = 4;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5.nr = hardware_config->vlenb >> 2;
+
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5s2.ukernel = (xnn_input_T_dwconv_ukernel_fn) xnn_f32_dwconv2d_chw_ukernel_5x5s2p2__rvv_1x4_acc2;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5s2.init.f32 = xnn_init_f32_minmax_scalar_params;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5s2.output_height_tile = 1;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5s2.output_width_tile = 4;
+    f32_input_T_dwconv_config.dwconv2d_chw_5x5s2.nr = hardware_config->vlenb >> 2;
+    return;
+  }
+  #endif
+
+}
 struct xnn_dwconv_config* xnn_init_f16_dwconv_config() {
   const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
   if (hardware_config == NULL || !xnn_is_f16_compatible_config(hardware_config)) {
@@ -1322,4 +1358,13 @@ struct xnn_dwconv_config* xnn_init_qu8_dwconv_config() {
   }
   XNN_INIT_ONCE(qu8_dwconv);
   return qu8_dwconv_config;
+}
+
+struct xnn_input_T_dwconv_config* xnn_init_f32_input_T_dwconv_config() {
+  const struct xnn_hardware_config* hardware_config = xnn_init_hardware_config();
+  if (hardware_config == NULL) {
+    return NULL;
+  }
+  XNN_INIT_ONCE(f32_input_T_dwconv);
+  return &f32_input_T_dwconv_config;
 }

@@ -52,6 +52,14 @@ struct xnn_ukernel_dwconv2d {
   uint8_t output_width_tile;
 };
 
+struct xnn_ukernel_input_T_dwconv2d {
+  union {
+    xnn_input_T_dwconv_ukernel_fn chw_fn;
+  };
+  uint8_t output_width_tile;
+  size_t nr;
+};
+
 struct xnn_ukernel_gemm {
   struct xnn_hmp_gemm_ukernel gemm_cases[XNN_MAX_MR];
   // Attention operator uses both types of packing.
@@ -122,6 +130,7 @@ struct xnn_ukernel {
     struct xnn_ukernel_conv2d conv2d;
     struct xnn_ukernel_dwconv dwconv;
     struct xnn_ukernel_dwconv2d dwconv2d;
+    struct xnn_ukernel_input_T_dwconv2d input_T_dwconv2d;
     struct {
       struct xnn_ukernel_gemm gemm;
       struct xnn_ukernel_gemm gemm_nr2;
@@ -396,6 +405,7 @@ struct xnn_operator {
     struct channel_shuffle_context channel_shuffle;
     struct conv2d_context conv2d;
     struct dwconv2d_context dwconv2d;
+    struct input_T_dwconv2d_context input_T_dwconv;
     struct {
       struct dwconv_context dwconv;
       struct dwconv_indirection_init_context dwconv_indirection_init;

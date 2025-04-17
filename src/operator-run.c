@@ -1231,6 +1231,22 @@ void xnn_compute_dwconv2d_chw(
     &context->params);
 }
 
+void xnn_compute_input_T_dwconv2d_cnhw(
+  const struct input_T_dwconv2d_context context[restrict XNN_MIN_ELEMENTS(1)],
+  size_t channel,
+  size_t batch_index
+  )
+{
+  context->chw_ukernel(
+    context->input_height,
+    context->input_width,
+    (const void*) ((uintptr_t) context->input + channel * context->input_channel_stride + batch_index * context->input_batch_stride),
+    (const void*) ((uintptr_t) context->packed_weights + channel * context->weights_channel_stride),
+    context->zero,
+    (void*) ((uintptr_t) context->output + channel * context->output_channel_stride + batch_index * context->output_batch_stride),
+    context->input_padding_top,
+    &context->params);
+}
 void xnn_compute_argmax_pooling_unipass(
     const struct argmax_pooling_context context[restrict XNN_MIN_ELEMENTS(1)],
     size_t batch_index,

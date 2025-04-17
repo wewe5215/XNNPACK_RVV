@@ -287,6 +287,66 @@ error:
   return status;
 }
 
+static enum xnn_status create_input_T_dwconv_path(
+  const uint32_t kernel_height,
+  const uint32_t kernel_width,
+  const uint32_t groups,
+  const void* kernel,
+  const void* bias,
+  const uint32_t flags,
+  const uint32_t log2_filter_element_size,
+  const xnn_pack_chw_dwconv_hwg_w_fn pack_chw_dwconv_hwg_w,
+  const xnn_pack_chw_dwconv_ghw_w_fn pack_chw_dwconv_ghw_w,
+  const size_t nr,
+  const size_t output_width_tile,
+  const xnn_input_T_dwconv_ukernel_fn dwconv_ukernel,
+  const enum xnn_operator_type operator_type,
+  const xnn_operator_t convolution_op)
+{
+assert(dwconv_ukernel != NULL);
+
+const size_t packed_weights_size = (groups * (kernel_height * kernel_width + 1 /* bias */)) << log2_filter_element_size;
+const size_t aligned_total_weights_size = round_up_po2(packed_weights_size, XNN_ALLOCATION_ALIGNMENT);
+void* weights_ptr = xnn_get_pointer_to_write_weights(
+    convolution_op, aligned_total_weights_size, 0);
+if (weights_ptr == NULL) {
+  xnn_log_error("failed to reserve or allocated %zu bytes for %s operator dwconv packed weights",
+                aligned_total_weights_size, xnn_operator_type_to_string(operator_type));
+  return xnn_status_out_of_memory;
+}
+xnn_log_debug("allocated %zu bytes for packed weights in %s operator",
+              aligned_total_weights_size, xnn_operator_type_to_string(operator_type));
+
+uint32_t cache_seed = kernel_height ^ kernel_width ^ groups;
+if (flags & XNN_FLAG_DEPTHWISE_CONVOLUTION) {
+  pack_chw_dwconv_hwg_w(
+    kernel_height * kernel_width, groups,
+    kernel, bias, weights_ptr, NULL);
+} else {
+  cache_seed = ~cache_seed;
+  pack_chw_dwconv_ghw_w(
+    kernel_height * kernel_width, groups,
+    kernel, bias, weights_ptr, NULL);
+}
+
+if (use_weights_cache(convolution_op)) {
+  struct xnn_weights_cache_look_up_key cache_key;
+  cache_key.seed = cache_seed;
+  cache_key.kernel = kernel;
+  cache_key.bias = bias;
+  convolution_op->packed_weights.offset = xnn_look_up_or_insert_weights_cache(
+      convolution_op->weights_cache, &cache_key, weights_ptr, aligned_total_weights_size);
+}
+
+convolution_op->ukernel.input_T_dwconv2d = (struct xnn_ukernel_input_T_dwconv2d) {
+  .chw_fn = dwconv_ukernel,
+  .output_width_tile = output_width_tile,
+  .nr = nr,
+};
+
+return xnn_status_success;
+}
+
 static enum xnn_status create_gemm_or_igemm(
     enum xnn_microkernel_type ukernel_type,
     uint32_t kernel_size,
@@ -1080,6 +1140,9 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   const void* gemm_params,
   size_t gemm_params_size,
   const struct xnn_input_T_gemm_config* gemm_config,
+  const void* dwconv_params,
+  size_t dwconv_params_size,
+  const struct xnn_input_T_dwconv2d_parameters* dwconv2d_parameters,
   bool linear_activation,
   bool relu_activation,
   enum xnn_operator_type operator_type,
@@ -1178,7 +1241,10 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
 
   enum xnn_microkernel_type ukernel_type = xnn_microkernel_type_default;
   const bool unit_subsampling = (subsampling_width | subsampling_height) == 1;
-  if (kernel_size == 1 && unit_subsampling && !any_padding) {
+  if (group_input_channels == 1 && group_output_channels == 1 && dwconv2d_parameters != NULL) {
+    xnn_log_debug("running with xnn_microkernel_type_input_T_dwconv");
+    ukernel_type = xnn_microkernel_type_input_T_dwconv;
+  } else if (kernel_size == 1 && unit_subsampling && !any_padding) {
     ukernel_type = xnn_microkernel_type_input_T_gemm;
   } else {
     ukernel_type = xnn_microkernel_type_input_T_igemm;
@@ -1186,7 +1252,19 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   assert(ukernel_type != xnn_microkernel_type_default);
 
   size_t zero_size = 0;
-  status = create_input_T_gemm_or_igemm(
+  if (ukernel_type == xnn_microkernel_type_input_T_dwconv){
+    status = create_input_T_dwconv_path(
+      kernel_height, kernel_width, groups,
+      kernel, bias, flags, log2_filter_element_size,
+      (xnn_pack_chw_dwconv_hwg_w_fn) xnn_pack_f32_chw_dwconv_hwg_w,
+      (xnn_pack_chw_dwconv_ghw_w_fn) xnn_pack_f32_chw_dwconv_ghw_w,
+      dwconv2d_parameters->nr,
+      dwconv2d_parameters->output_width_tile,
+      dwconv2d_parameters->ukernel,
+      operator_type, convolution_op);
+    memcpy(&convolution_op->params.f32_chw, dwconv_params, dwconv_params_size);
+  } else {
+    status = create_input_T_gemm_or_igemm(
       ukernel_type, kernel_size,
       groups, group_input_channels, group_output_channels,
       kernel, bias, flags,
@@ -1198,6 +1276,9 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
       operator_type,
       convolution_op,
       &zero_size);
+    convolution_op->riscv_packa_method = gemm_config->packa_gemm_x4v;
+    int nr = gemm_config->nr;
+  }
   if (status != xnn_status_success) {
     goto error;
   }
@@ -1218,8 +1299,6 @@ static enum xnn_status create_input_T_convolution2d_nhwc(
   // TODO: move the following code related to context to reshape function, since context may be initialized there
   convolution_op->kernel = kernel;
   convolution_op->bias = bias;
-  convolution_op->riscv_packa_method = gemm_config->packa_gemm_x4v;
-  int nr = gemm_config->nr;
 
   convolution_op->padding_top = input_padding_top;
   convolution_op->padding_right = input_padding_right;
@@ -2972,6 +3051,35 @@ if XNN_LIKELY(gemm_config->init.f32 != NULL) {
   gemm_config->init.f32(&gemm_params, output_min, output_max);
 }
 
+const struct xnn_input_T_dwconv_config* dwconv_config = xnn_init_f32_input_T_dwconv_config();
+if (dwconv_config == NULL) {
+  xnn_log_error("failed to create %s operator: unsupported hardware configuration",
+                xnn_operator_type_to_string(xnn_operator_type_convolution_nhwc_f32));
+  return xnn_status_unsupported_hardware;
+}
+
+const struct xnn_input_T_dwconv2d_parameters* dwconv2d_parameters = NULL;
+const bool any_padding = (input_padding_left | input_padding_top | input_padding_right | input_padding_bottom) != 0;
+const bool is_1x1 = kernel_width == 1 && kernel_height == 1 && subsampling_height == 1 && subsampling_width == 1;
+const bool is_3x3 = kernel_width == 3 && kernel_height == 3 && dilation_height == 1 && dilation_width == 1;
+const bool is_5x5 = kernel_width == 5 && kernel_height == 5 && dilation_height == 1 && dilation_width == 1;
+if (is_3x3 && subsampling_height == 1 && subsampling_width == 1 &&
+  input_padding_top == 1 && input_padding_left == 1 && input_padding_bottom == 1 && input_padding_right == 1) {
+  dwconv2d_parameters = &dwconv_config->dwconv2d_chw_3x3;
+} else if (is_3x3 && subsampling_height == 2 && subsampling_width == 2 &&
+  (input_padding_top == 0 || input_padding_top == 1) && input_padding_left == 1 && input_padding_bottom == 1 && input_padding_right == 1) {
+  dwconv2d_parameters = &dwconv_config->dwconv2d_chw_3x3s2;
+} else if (is_5x5 && subsampling_height == 1 && subsampling_width == 1 &&
+  input_padding_top == 2 && input_padding_left == 2 && input_padding_bottom == 2 && input_padding_right == 2) {
+  dwconv2d_parameters = &dwconv_config->dwconv2d_chw_5x5;
+} else {
+  dwconv2d_parameters = &dwconv_config->dwconv2d_chw_5x5s2;
+}
+union xnn_f32_minmax_params dwconv_params;
+if XNN_LIKELY(dwconv2d_parameters->init.f32 != NULL) {
+  dwconv2d_parameters->init.f32(&dwconv_params, output_min, output_max);
+}
+
 
 return create_input_T_convolution2d_nhwc(
   input_padding_top, input_padding_right, input_padding_bottom, input_padding_left,
@@ -2994,6 +3102,9 @@ return create_input_T_convolution2d_nhwc(
   /*gemm_params=*/&gemm_params,
   /*gemm_params_size=*/sizeof(gemm_params),
   /*gemm_config=*/gemm_config,
+  /*dwconv_params=*/&dwconv_params,
+  /*dwconv_params_size=*/sizeof(dwconv_params),
+  /*dwconv2d_parameters=*/dwconv2d_parameters,
   /*linear_activation=*/linear_activation,
   /*relu_activation=*/relu_activation,
   /*operator_type=*/xnn_operator_type_convolution_nhwc_f32,
@@ -4299,6 +4410,60 @@ static enum xnn_status reshape_dwconv(
   return xnn_status_success;
 }
 
+static enum xnn_status reshape_input_T_dwconv(
+  xnn_operator_t convolution_op,
+  uint32_t log2_input_element_size,
+  uint32_t log2_filter_element_size,
+  uint32_t bias_element_size,
+  uint32_t extra_weights_elements_size,
+  uint32_t log2_output_element_size,
+  size_t num_threads)
+{
+  size_t batch_size = convolution_op->batch_size;
+  size_t input_height = convolution_op->input_height;
+  size_t input_width = convolution_op->input_width;
+  size_t output_height = convolution_op->output_height;
+  size_t output_width = convolution_op->output_width;
+  size_t input_batch_stride = (input_height * input_width) << log2_input_element_size;
+  size_t output_batch_stride = (output_height * output_width) << log2_output_element_size;
+  const size_t zero_size = (input_width << log2_input_element_size) + 2 * XNN_EXTRA_BYTES;
+  const uint32_t nr = convolution_op->ukernel.input_T_dwconv2d.nr;
+  xnn_log_debug("nr = %lu", nr);
+  // Note: zero buffer must be SIMD-aligned, so we can't use xnn_reallocate_memory
+  xnn_release_simd_memory(convolution_op->zero_buffer);
+  convolution_op->zero_buffer = xnn_allocate_zero_simd_memory(zero_size);
+  if (convolution_op->zero_buffer == NULL) {
+    xnn_log_error(
+      "failed to allocate %zu bytes for %s operator zero padding",
+      sizeof(struct xnn_operator), xnn_operator_type_to_string(convolution_op->type));
+    return xnn_status_out_of_memory;
+  }
+  convolution_op->context.input_T_dwconv = (struct input_T_dwconv2d_context) {
+    .input_height = input_height,
+    .input_width = input_width << log2_input_element_size,
+    .zero = convolution_op->zero_buffer,
+    .input_padding_top = convolution_op->padding_top,
+    .input_channel_stride = batch_size * input_height * input_width << log2_input_element_size,
+    .input_batch_stride = input_batch_stride,
+    .packed_weights = packed_weights(convolution_op),
+    .weights_channel_stride = bias_element_size +
+      (convolution_op->kernel_height * convolution_op->kernel_width << log2_filter_element_size),
+    .output_channel_stride = batch_size * output_height * output_width << log2_output_element_size,
+    .output_batch_stride = output_batch_stride,
+    .chw_ukernel = convolution_op->ukernel.input_T_dwconv2d.chw_fn,
+  };
+  memcpy(&convolution_op->context.input_T_dwconv.params, &convolution_op->params.f32_chw, sizeof(convolution_op->context.input_T_dwconv.params));
+
+  convolution_op->compute[0].type = xnn_parallelization_type_2d;
+  convolution_op->compute[0].task_2d = (pthreadpool_task_2d_t) xnn_compute_input_T_dwconv2d_cnhw;
+  convolution_op->compute[0].range[0] = convolution_op->groups;
+  convolution_op->compute[0].range[1] = batch_size;
+  convolution_op->state = xnn_run_state_needs_setup;
+
+  return xnn_status_success;
+}
+
+
 static enum xnn_status reshape_vmulcaddc(
   xnn_operator_t convolution_op,
   uint32_t log2_input_element_size,
@@ -4461,6 +4626,7 @@ static enum xnn_status reshape_input_T_convolution2d_nhwc(
   uint32_t log2_input_element_size,
   uint32_t log2_filter_element_size,
   uint32_t log2_accumulator_element_size,
+  uint32_t bias_element_size,
   uint32_t extra_weights_elements_size,
   uint32_t log2_output_element_size,
   size_t* workspace_size,
@@ -4520,6 +4686,13 @@ static enum xnn_status reshape_input_T_convolution2d_nhwc(
 
   const size_t num_threads = pthreadpool_get_threads_count(threadpool);
   switch (convolution_op->ukernel.type) {
+    case xnn_microkernel_type_input_T_dwconv:
+      *workspace_size = 0;
+      *workspace_alignment = 1;
+      return reshape_input_T_dwconv(
+          convolution_op,
+          log2_input_element_size, log2_filter_element_size, bias_element_size, extra_weights_elements_size, log2_output_element_size,
+          num_threads);
     case xnn_microkernel_type_input_T_gemm:
       return reshape_input_T_gemm(
           convolution_op,
@@ -4843,6 +5016,7 @@ return reshape_input_T_convolution2d_nhwc(
   /*log2_input_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
   /*log2_filter_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
   /*log2_accumulator_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
+  /*bias_element_size=*/sizeof(float),
   /*extra_weights_elements_size=*/sizeof(float),
   /*log2_output_element_size=*/XNN_LOG2_SIZEOF_FLOAT,
   workspace_size, workspace_alignment,
@@ -5596,6 +5770,12 @@ static enum xnn_status setup_input_T_convolution2d_nhwc(
   const size_t nr = convolution_op->ukernel.input_T_gemm.nr;
   const size_t output_width = convolution_op->output_width;
   switch (convolution_op->ukernel.type) {
+    case xnn_microkernel_type_input_T_dwconv:
+      xnn_log_debug("using setup_input_T_dwconv");
+      convolution_op->context.input_T_dwconv.input = input;
+      convolution_op->context.input_T_dwconv.output = output;
+      convolution_op->state = xnn_run_state_ready;
+      return xnn_status_success;
     case xnn_microkernel_type_input_T_gemm:
       xnn_log_debug("using setup_input_T_gemm");
       return setup_input_T_gemm(convolution_op, log2_input_element_size);

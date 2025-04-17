@@ -2091,7 +2091,6 @@ DECLARE_F32_DWCONV2D_CHW_MINMAX_UKERNEL_FUNCTION(xnn_f32_dwconv2d_chw_ukernel_5x
     const float* weights,                                         \
     const float* zero,                                            \
     float* output,                                                \
-    const int32_t* mask_table,                                    \
     uint32_t padding_top,                                         \
     const union xnn_f32_minmax_params params[XNN_RESTRICT XNN_MIN_ELEMENTS(1)]);
 

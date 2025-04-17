@@ -12,7 +12,6 @@ void xnn_f32_dwconv2d_chw_ukernel_5x5p2__rvv_4x4(
     const float* weights,
     const float* zero,
     float* output,
-    const int32_t* mask_table,
     uint32_t padding_top,
     const union xnn_f32_minmax_params params[restrict XNN_MIN_ELEMENTS(1)]) XNN_OOB_READS
 {
@@ -292,7 +291,8 @@ void xnn_f32_dwconv2d_chw_ukernel_5x5p2__rvv_4x4(
     assert(w >= 1 * sizeof(float));
     assert(w <= vl * sizeof(float));
     {
-        const vuint32m1_t vmask = __riscv_vle32_v_u32m1((const uint32_t*) &mask_table[(nr-1) - (((input_width >> 2) - 1) & (nr-1))], vl);
+        int32_t mask[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0};
+        const vuint32m1_t vmask = __riscv_vle32_v_u32m1((const uint32_t*) &mask[(nr-1) - (((input_width >> 2) - 1) & (nr-1))], vl);
         vfloat32m1_t vo0p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);
         vfloat32m1_t vo1p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);
         vfloat32m1_t vo2p0 =  __riscv_vfmv_v_f_f32m1(weights[0], vl);

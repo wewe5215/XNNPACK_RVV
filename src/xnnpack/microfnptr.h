@@ -596,6 +596,16 @@ typedef void (*xnn_dwconv_unipass_ukernel_fn)(
     const void* zero,
     const void* params);
 
+typedef void (*xnn_input_T_dwconv_ukernel_fn)(
+    size_t input_height,
+    size_t input_width,
+    const void* input,
+    const void* weights,
+    const void* zero,
+    void* output,
+    uint32_t padding_top,
+    const void* params);
+
 typedef void (*xnn_f32_dwconv_unipass_ukernel_fn)(
     size_t channels,
     size_t output_width,
