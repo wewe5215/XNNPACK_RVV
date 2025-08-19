@@ -1,3 +1,22 @@
+
+**# Code implementation for [Efficient Column-Wise N\:M Pruning on RISC-V CPU](https://arxiv.org/abs/2507.17301)**
+
+### Overview
+
+* Implements low-level convolution operators in **CNHW** layout with pruning, located at `XNNPACK_RVV/src/operators/convolution-nhwc.c`. It currently supports all convolution operators used in **ResNet**, **MobileNet**, and **DenseNet**, and includes benchmark results.
+
+* Offers convolution operators in CNHW layout with varying RVV **LMUL** configurations (**LMUL=1, 2, 4, and 8**) as standalone APIs. These can be utilized by external frameworks such as **AITemplate**.
+
+* Implements fusion of `im2col` and data packing, located at `XNNPACK_RVV/src/packing.cc`.
+
+* Provides microkernels with column-wise pruning, located at `src/f32-gemm-transposea/MRxNRv-pruned-rvv.c.in`.
+
+## Future Work
+- Support Convolution 2d with CNHW layout implemented with vmulcaddc
+- Support F16 implementation
+- currently, the code for Fusion of Im2col and packing is a little bit dirty, as all of the corner cases and conditions are turned into bitwise operation. I will fix this later
+
+
 # XNNPACK
 
 XNNPACK is a highly optimized solution for neural network inference on ARM, x86, WebAssembly, and RISC-V platforms. XNNPACK is not intended for direct use by deep learning practitioners and researchers; instead it provides low-level performance primitives for accelerating high-level machine learning frameworks, such as [TensorFlow Lite](https://www.tensorflow.org/lite), [TensorFlow.js](https://www.tensorflow.org/js), [PyTorch](https://pytorch.org/), [ONNX Runtime](https://onnxruntime.ai), and [MediaPipe](https://mediapipe.dev).
