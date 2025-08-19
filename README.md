@@ -1,5 +1,5 @@
 
-**# Code implementation for [Efficient Column-Wise N\:M Pruning on RISC-V CPU](https://arxiv.org/abs/2507.17301)**
+# Code implementation for [Efficient Column-Wise N\:M Pruning on RISC-V CPU](https://arxiv.org/abs/2507.17301)
 
 ### Overview
 
