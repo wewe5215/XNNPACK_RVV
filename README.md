@@ -3,7 +3,9 @@
 
 ### Overview
 
-* Implements low-level convolution operators in **CNHW** layout with pruning, located at `XNNPACK_RVV/src/operators/convolution-nhwc.c`. It currently supports all convolution operators used in **ResNet**, **MobileNet**, and **DenseNet**, and includes benchmark results.
+* Implements low-level convolution operators in **CNHW** layout with pruning (located at XNNPACK_RVV/src/operators/convolution-nhwc.c).
+
+* The benchmark with input dimensions for ResNet, MobileNet, and DenseNet are available in the [XNNPACK_Standalone_benchmark](https://github.com/wewe5215/XNNPACK_Standalone_benchmark) repository.
 
 * Offers convolution operators in CNHW layout with varying RVV **LMUL** configurations (**LMUL=1, 2, 4, and 8**) as standalone APIs. These can be utilized by external frameworks such as **AITemplate**.
 
