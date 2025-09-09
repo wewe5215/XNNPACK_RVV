@@ -3,6 +3,7 @@
 XNNPACK_RVV is a based on [XNNPACK](https://github.com/google/XNNPACK) library
 ## My contributions
 - Code implementation for [Efficient Column-Wise N\:M Pruning on RISC-V CPU](https://arxiv.org/abs/2507.17301)
+- Integrated the newly developed operators into the AI compiler: [AI_template_RVV_backend](https://github.com/wewe5215/AI_template_RVV_backend/tree/main)
 - Implements low-level convolution operators in **CNHW** layout
   - `input_t_average_pooling2d_nhwc_f32`
   - `input_t_max_pooling2d_nhwc_f32`
@@ -16,6 +17,12 @@ XNNPACK_RVV is a based on [XNNPACK](https://github.com/google/XNNPACK) library
   - `xnn_x32_packa_in_T_gemm_im2col_s2_d1_p0_x{1, 2, 4}v`
   - `xnn_x32_packa_in_T_gemm_im2col_s1_d1_{2x2v, 4x4v, 4x8v, 8x8v, ....}`
 - Provides microkernels with column-wise pruning, located at `src/f32-gemm-transposea/MRxNRv-pruned-rvv.c.in`.
+## Setup
+```
+chmod +x scripts/build-local.sh
+./scripts/build-local.sh
+```
+**Compiler requirement:** compile the generated C++ with **Clang ≥ 17.0.2**; older versions lack several RVV v0.12 intrinsics required by XNNPACK.
 
 ## Future Work
 - Support Convolution 2d with CNHW layout implemented with vmulcaddc
